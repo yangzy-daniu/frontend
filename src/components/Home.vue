@@ -92,13 +92,11 @@ const goToUserManagement = () => {
 }
 
 const goToRoleManagement = () => {
-    // router.push('/role')
-    ElMessage.info('角色管理功能开发中...')
+    router.push('/role')
 }
 
 const goToMenuManagement = () => {
     router.push('/menu')
-    // ElMessage.info('菜单管理功能开发中...')
 }
 
 onMounted(() => {

@@ -12,7 +12,7 @@
             </template>
 
             <!-- 搜索区域 -->
-            <el-form :inline="true" :model="searchForm" class="search-form">
+            <el-form inline :model="searchForm" class="search-form">
                 <el-form-item label="关键词">
                     <el-input
                             v-model="searchForm.keyword"
@@ -20,22 +20,33 @@
                             clearable
                             @clear="handleSearch"
                             @keyup.enter="handleSearch"
-                    >
-                        <template #append>
-                            <el-button @click="handleSearch">
-                                <el-icon><Search /></el-icon>
-                                搜索
-                            </el-button>
-                        </template>
-                    </el-input>
+                    />
                 </el-form-item>
-
                 <el-form-item label="角色">
-                    <el-select v-model="searchForm.role" placeholder="请选择角色" clearable @change="handleSearch">
-                        <el-option label="管理员" value="ADMIN" />
-                        <el-option label="普通用户" value="USER" />
+                    <el-select
+                            v-model="searchForm.role"
+                            placeholder="请选择角色"
+                            clearable
+                            @change="handleSearch"
+                            style="width: 140px"
+                    >
+                        <el-option label="普通用户" value="user" />
+                        <el-option label="管理员" value="admin" />
+                        <el-option label="超级管理员" value="super" />
+                        <el-option label="系统管理" value="system" />
                     </el-select>
                 </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="handleSearch">
+                        <el-icon><Search /></el-icon>
+                        搜索
+                    </el-button>
+                    <el-button @click="resetSearch">
+                        <el-icon><Refresh /></el-icon>
+                        重置
+                    </el-button>
+                </el-form-item>
+
             </el-form>
 
             <!-- 表格区域 -->
@@ -47,14 +58,29 @@
                     @selection-change="handleSelectionChange"
             >
                 <el-table-column type="selection" width="55" />
-                <el-table-column prop="id" label="ID" width="80" />
                 <el-table-column prop="username" label="用户名" min-width="120" />
                 <el-table-column prop="name" label="姓名" min-width="120" />
-                <el-table-column prop="age" label="年龄" width="100" />
                 <el-table-column prop="role" label="角色" width="120">
                     <template #default="scope">
-                        <el-tag :type="scope.row.role === 'ADMIN' ? 'danger' : 'primary'">
-                            {{ scope.row.role === 'ADMIN' ? '管理员' : '普通用户' }}
+                        <!-- 保持原有 admin/user 颜色，新增两种角色用 warning / success 区分 -->
+                        <el-tag
+                            :type="scope.row.role === 'admin'
+                            ? 'danger'
+                            : scope.row.role === 'user'
+                            ? 'primary'
+                            : scope.row.role === 'super'
+                            ? 'warning'
+                            : 'success'"
+                        >
+                            {{
+                                scope.row.role === 'admin'
+                                        ? '管理员'
+                                        : scope.row.role === 'user'
+                                                ? '普通用户'
+                                                : scope.row.role === 'super'
+                                                        ? '超级管理员'
+                                                        : '系统管理'
+                            }}
                         </el-tag>
                     </template>
                 </el-table-column>
@@ -87,6 +113,7 @@
                 </div>
 
                 <el-pagination
+                        background
                         v-model:current-page="pagination.currentPage"
                         v-model:page-size="pagination.pageSize"
                         :page-sizes="[10, 20, 50, 100]"
@@ -102,7 +129,7 @@
         <el-dialog
                 :title="dialogTitle"
                 v-model="dialogVisible"
-                width="500px"
+                width="600px"
                 :before-close="handleDialogClose"
         >
             <el-form
@@ -141,19 +168,12 @@
                     <el-input v-model="userForm.name" placeholder="请输入姓名" />
                 </el-form-item>
 
-                <el-form-item label="年龄" prop="age">
-                    <el-input-number
-                            v-model="userForm.age"
-                            :min="1"
-                            :max="150"
-                            controls-position="right"
-                    />
-                </el-form-item>
-
                 <el-form-item label="角色" prop="role">
                     <el-radio-group v-model="userForm.role">
-                        <el-radio label="USER">普通用户</el-radio>
-                        <el-radio label="ADMIN">管理员</el-radio>
+                        <el-radio label="user">普通用户</el-radio>
+                        <el-radio label="admin">管理员</el-radio>
+                        <el-radio label="super">超级管理员</el-radio>
+                        <el-radio label="system">系统管理</el-radio>
                     </el-radio-group>
                 </el-form-item>
             </el-form>
@@ -175,12 +195,15 @@ import {
     Plus,
     Search,
     Edit,
-    Delete
+    Delete,
+    Refresh
 } from '@element-plus/icons-vue'
 import {
-    listUser,
+    listUserByPage,
     addUser,
-    delUser
+    delUser,
+    batchDeleteUsers,
+    updateUser
 } from '@/api/user'
 
 const loading = ref(false)
@@ -213,8 +236,7 @@ const userForm = reactive({
     password: '',
     confirmPassword: '',
     name: '',
-    age: 18,
-    role: 'USER'
+    role: 'user'
 })
 
 // 表单验证规则
@@ -224,27 +246,41 @@ const userRules = {
         { min: 3, max: 20, message: '用户名长度为3-20个字符', trigger: 'blur' }
     ],
     password: [
-        { required: true, message: '请输入密码', trigger: 'blur' },
-        { min: 6, message: '密码长度不能少于6个字符', trigger: 'blur' }
-    ],
-    confirmPassword: [
-        { required: true, message: '请确认密码', trigger: 'blur' },
         {
+            required: true,
+            message: '请输入密码',
+            trigger: 'blur',
             validator: (rule, value, callback) => {
-                if (value !== userForm.password) {
-                    callback(new Error('两次输入密码不一致'))
+                if (!isEdit.value && (!value || value.length < 6)) {
+                    callback(new Error('密码长度不能少于6个字符'))
                 } else {
                     callback()
                 }
-            },
-            trigger: 'blur'
+            }
+        }
+    ],
+    confirmPassword: [
+        {
+            required: true,
+            message: '请确认密码',
+            trigger: 'blur',
+            validator: (rule, value, callback) => {
+                if (!isEdit.value) {
+                    if (!value) {
+                        callback(new Error('请确认密码'))
+                    } else if (value !== userForm.password) {
+                        callback(new Error('两次输入密码不一致'))
+                    } else {
+                        callback()
+                    }
+                } else {
+                    callback()
+                }
+            }
         }
     ],
     name: [
         { required: true, message: '请输入姓名', trigger: 'blur' }
-    ],
-    age: [
-        { required: true, message: '请输入年龄', trigger: 'blur' }
     ],
     role: [
         { required: true, message: '请选择角色', trigger: 'change' }
@@ -253,16 +289,38 @@ const userRules = {
 
 const dialogTitle = computed(() => isEdit.value ? '编辑用户' : '新增用户')
 
+// 构建查询参数
+const buildQueryParams = () => {
+    const params = {
+        page: pagination.currentPage,
+        size: pagination.pageSize
+    }
+
+    if (searchForm.keyword) {
+        params.keyword = searchForm.keyword
+    }
+
+    if (searchForm.role) {
+        params.role = searchForm.role
+    }
+
+    return params
+}
+
 // 加载用户数据
 const loadUsers = async () => {
     loading.value = true
     try {
-        const response = await listUser()
-        tableData.value = response.data
-        pagination.total = tableData.value.length
+        const params = buildQueryParams()
+        const response = await listUserByPage(params)
+        tableData.value = response.data.content
+        pagination.total = response.data.totalElements
     } catch (error) {
         console.error('加载用户数据失败:', error)
         ElMessage.error('加载用户数据失败')
+        // 失败时清空数据
+        tableData.value = []
+        pagination.total = 0
     } finally {
         loading.value = false
     }
@@ -274,18 +332,18 @@ const handleSearch = () => {
     loadUsers()
 }
 
+// 重置搜索
+const resetSearch = () => {
+    searchForm.keyword = ''
+    searchForm.role = ''
+    pagination.currentPage = 1
+    loadUsers()
+}
+
 // 新增用户
 const handleAdd = () => {
     isEdit.value = false
-    Object.assign(userForm, {
-        id: null,
-        username: '',
-        password: '',
-        confirmPassword: '',
-        name: '',
-        age: 18,
-        role: 'USER'
-    })
+    resetForm()
     dialogVisible.value = true
 }
 
@@ -298,7 +356,6 @@ const handleEdit = (row) => {
         password: '',
         confirmPassword: '',
         name: row.name,
-        age: row.age,
         role: row.role
     })
     dialogVisible.value = true
@@ -313,7 +370,7 @@ const handleDelete = async (id) => {
 
         await delUser(id)
         ElMessage.success('删除成功')
-        loadUsers()
+        await loadUsers()
     } catch (error) {
         // 用户取消删除
     }
@@ -335,9 +392,24 @@ const handleBatchDelete = async () => {
         await batchDeleteUsers(ids)
         ElMessage.success('批量删除成功')
         selectedRows.value = []
-        loadUsers()
+        await loadUsers()
     } catch (error) {
         // 用户取消删除
+    }
+}
+
+// 重置表单
+const resetForm = () => {
+    Object.assign(userForm, {
+        id: null,
+        username: '',
+        password: '',
+        confirmPassword: '',
+        name: '',
+        role: 'user'
+    })
+    if (userFormRef.value) {
+        userFormRef.value.clearValidate()
     }
 }
 
@@ -352,7 +424,16 @@ const handleSubmit = async () => {
         submitting.value = true
 
         if (isEdit.value) {
-            await updateUser(userForm.id, userForm)
+            // 编辑时只传需要更新的字段
+            const updateData = {
+                name: userForm.name,
+                role: userForm.role
+            }
+            // 如果密码不为空，则更新密码
+            if (userForm.password) {
+                updateData.password = userForm.password
+            }
+            await updateUser(userForm.id, updateData)
             ElMessage.success('更新成功')
         } else {
             await addUser(userForm)
@@ -360,10 +441,10 @@ const handleSubmit = async () => {
         }
 
         dialogVisible.value = false
-        loadUsers()
+        await loadUsers()
     } catch (error) {
         console.error('保存用户失败:', error)
-        ElMessage.error('保存用户失败')
+        ElMessage.error('保存用户失败: ' + (error.response?.data?.message || error.message))
     } finally {
         submitting.value = false
     }
@@ -372,7 +453,7 @@ const handleSubmit = async () => {
 // 关闭对话框
 const handleDialogClose = () => {
     dialogVisible.value = false
-    userFormRef.value?.clearValidate()
+    resetForm()
 }
 
 // 选择行变化
@@ -406,7 +487,7 @@ onMounted(() => {
 
 <style scoped>
 .user-management {
-    height: 100%;
+    padding: 0;
 }
 
 .card-header {

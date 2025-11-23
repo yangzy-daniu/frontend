@@ -1,7 +1,7 @@
 import request from './request'
 
 // 菜单管理API
-export const getMenus = () => request.get('/menus/all')
+export const getAllMenus = () => request.get('/menus/all')
 export const getMenuTree = () => request.get('/menus/tree')
 export const getMenuById = (id) => request.get(`/menus/${id}`)
 export const createMenu = (data) => request.post('/menus', data)

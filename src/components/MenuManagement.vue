@@ -12,7 +12,7 @@
             </template>
 
             <!-- 搜索区域 -->
-            <el-form :model="queryParams" inline>
+            <el-form inline :model="queryParams" class="search-form">
                 <el-form-item label="菜单名称">
                     <el-input
                             v-model="queryParams.name"
@@ -185,7 +185,7 @@ import {
     Fold,
     Expand
 } from '@element-plus/icons-vue'
-import {getMenus, getMenuTree, createMenu, updateMenu, deleteMenu, searchMenus} from '@/api/menu'
+import {getMenuTree, createMenu, updateMenu, deleteMenu, searchMenus} from '@/api/menu'
 
 // 常用图标列表
 const iconList = ref([
@@ -434,76 +434,6 @@ const getMockMenuData = () => {
     ]
 }
 
-// const getMenuList = async () => {
-//     loading.value = true
-//     try {
-//         // 这里调用后端API获取菜单列表
-//         const response = await fetch('/api/menus/all')
-//         const data = await response.json()
-//         menuList.value = data
-//     } catch (error) {
-//         console.error('获取菜单列表失败:', error)
-//         ElMessage.error('获取菜单列表失败')
-//         // 模拟数据
-//         menuList.value = [
-//             {
-//                 id: 1,
-//                 name: '首页',
-//                 path: '/home',
-//                 icon: 'House',
-//                 sort: 1,
-//                 parentId: null,
-//                 component: 'Home',
-//                 type: 1
-//             },
-//             {
-//                 id: 2,
-//                 name: '系统管理',
-//                 path: '/system',
-//                 icon: 'Setting',
-//                 sort: 2,
-//                 parentId: null,
-//                 component: '',
-//                 type: 0,
-//                 children: [
-//                     {
-//                         id: 21,
-//                         name: '用户管理',
-//                         path: '/user',
-//                         icon: 'User',
-//                         sort: 1,
-//                         parentId: 2,
-//                         component: 'UserManagement',
-//                         type: 1
-//                     },
-//                     {
-//                         id: 22,
-//                         name: '角色管理',
-//                         path: '/role',
-//                         icon: 'Key',
-//                         sort: 2,
-//                         parentId: 2,
-//                         component: 'RoleManagement',
-//                         type: 1
-//                     },
-//                     {
-//                         id: 23,
-//                         name: '菜单管理',
-//                         path: '/menu',
-//                         icon: 'MenuIcon',
-//                         sort: 3,
-//                         parentId: 2,
-//                         component: 'MenuManagement',
-//                         type: 1
-//                     }
-//                 ]
-//             }
-//         ]
-//     } finally {
-//         loading.value = false
-//     }
-// }
-
 const resetQuery = () => {
     Object.assign(queryParams, {
         name: ''
@@ -636,6 +566,10 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.search-form {
+    margin-bottom: 20px;
 }
 
 .icon-selector {

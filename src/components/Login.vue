@@ -59,7 +59,7 @@
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
-import { login } from '@/api/user'
+import { login } from '@/api/author'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()

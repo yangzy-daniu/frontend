@@ -4,6 +4,7 @@ import Layout from '@/components/Layout.vue'
 import Home from '@/components/Home.vue'
 import userManagement from '@/components/UserManagement.vue'
 import menuManagement from '@/components/MenuManagement.vue'
+import roleManagement from '@/components/RoleManagement.vue'
 
 const routes = [
     {
@@ -27,6 +28,12 @@ const routes = [
                 name: 'userManagement',
                 component: userManagement,
                 meta: { title: '用户管理' }
+            },
+            {
+                path: 'role',
+                component: roleManagement,
+                // component: () => import('@/views/system/RoleManagement.vue'),
+                meta: { title: '角色管理', requiresAuth: true }
             },
             {
                 path: 'menu',

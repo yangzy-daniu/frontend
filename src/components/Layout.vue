@@ -94,7 +94,7 @@ import {
     Key,
     Menu as MenuIcon
 } from '@element-plus/icons-vue'
-import { getUserInfo, logout } from '@/api/user'
+import { logout } from '@/api/author'
 import { getMenuTree } from '@/api/menu'
 
 const router = useRouter()
