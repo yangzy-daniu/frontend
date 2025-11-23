@@ -95,6 +95,7 @@ import {
     Menu as MenuIcon
 } from '@element-plus/icons-vue'
 import { getUserInfo, logout } from '@/api/user'
+import { getMenuTree } from '@/api/menu'
 
 const router = useRouter()
 const route = useRoute()
@@ -108,40 +109,108 @@ const userInfo = reactive({
 })
 
 // 菜单数据
-const menus = ref([
-    {
-        id: 1,
-        name: '首页',
-        path: '/home',
-        icon: 'House'
-    },
-    {
-        id: 2,
-        name: '系统管理',
-        path: '/system',
-        icon: 'Setting',
-        children: [
-            {
-                id: 21,
-                name: '用户管理',
-                path: '/user-crud',
-                icon: 'User'
-            },
-            {
-                id: 22,
-                name: '角色管理',
-                path: '/role',
-                icon: 'Key'
-            },
-            {
-                id: 23,
-                name: '菜单管理',
-                path: '/menu',
-                icon: 'MenuIcon'
+const menus = ref([])
+
+// 过滤可用菜单的函数
+const filterAvailableMenus = (menuList) => {
+    return menuList.filter(menu => {
+        // 只保留 available 为 true 的菜单
+        if (menu.available === false) {
+            return false
+        }
+
+        // 如果有子菜单，递归过滤
+        if (menu.children && menu.children.length > 0) {
+            menu.children = filterAvailableMenus(menu.children)
+            // 如果过滤后子菜单为空，且当前菜单是目录类型，也过滤掉
+            if (menu.children.length === 0 && menu.type === 0) {
+                return false
             }
-        ]
+        }
+
+        return true
+    })
+}
+
+// 转换菜单数据格式，将后端返回的菜单格式转换为前端需要的格式
+const transformMenuData = (menuList) => {
+    return menuList.map(menu => {
+        const transformedMenu = {
+            id: menu.id,
+            name: menu.name,
+            path: menu.path,
+            icon: menu.icon,
+            available: menu.available
+        }
+
+        // 如果有子菜单，递归转换
+        if (menu.children && menu.children.length > 0) {
+            transformedMenu.children = transformMenuData(menu.children)
+        }
+
+        return transformedMenu
+    })
+}
+
+// 加载菜单数据
+const loadMenus = async () => {
+    try {
+        // 调用菜单树接口
+        const response = await getMenuTree()
+
+        if (response.data && response.data.length > 0) {
+            // 过滤可用菜单并转换格式
+            const availableMenus = filterAvailableMenus(response.data)
+            menus.value = transformMenuData(availableMenus)
+        } else {
+            // 如果接口返回空数据，使用默认菜单防止页面空白
+            menus.value = getDefaultMenus()
+        }
+    } catch (error) {
+        console.error('获取菜单失败:', error)
+        // 出错时使用默认菜单
+        menus.value = getDefaultMenus()
+        ElMessage.error('菜单加载失败，使用默认菜单')
     }
-])
+}
+
+// 默认菜单数据（备用）
+const getDefaultMenus = () => {
+    return [
+        {
+            id: 1,
+            name: '首页',
+            path: '/home',
+            icon: 'House'
+        },
+        {
+            id: 2,
+            name: '系统管理',
+            path: '/system',
+            icon: 'Setting',
+            children: [
+                {
+                    id: 21,
+                    name: '用户管理',
+                    path: '/user',
+                    icon: 'User'
+                },
+                {
+                    id: 22,
+                    name: '角色管理',
+                    path: '/role',
+                    icon: 'Key'
+                },
+                {
+                    id: 23,
+                    name: '菜单管理',
+                    path: '/menu',
+                    icon: 'MenuIcon'
+                }
+            ]
+        }
+    ]
+}
 
 const activeMenu = computed(() => route.path)
 
@@ -159,7 +228,7 @@ const handleCommand = async (command) => {
             localStorage.removeItem('token')
             localStorage.removeItem('user')
             ElMessage.success('退出成功')
-            router.push('/login')
+            await router.push('/login')
         } catch (error) {
             // 用户取消退出
         }
@@ -169,17 +238,44 @@ const handleCommand = async (command) => {
     }
 }
 
-const loadUserInfo = async () => {
+// 从本地存储加载用户信息
+const loadUserInfo = () => {
     try {
-        const response = await getUserInfo()
-        Object.assign(userInfo, response.data)
+        // 优先从 userInfo 存储中获取
+        const storedUserInfo = localStorage.getItem('userInfo')
+        if (storedUserInfo) {
+            const userData = JSON.parse(storedUserInfo)
+            Object.assign(userInfo, userData)
+        } else {
+            // 兼容旧的存储方式
+            const storedUser = localStorage.getItem('user')
+            if (storedUser) {
+                const userData = JSON.parse(storedUser)
+                Object.assign(userInfo, userData)
+                // 同时更新到新的存储格式
+                localStorage.setItem('userInfo', JSON.stringify({
+                    name: userData.name,
+                    role: userData.role,
+                    avatar: userData.avatar || '',
+                    username: userData.username || ''
+                }))
+            } else {
+                // 设置默认值
+                userInfo.name = '管理员'
+                userInfo.role = '系统管理员'
+            }
+        }
     } catch (error) {
-        console.error('获取用户信息失败:', error)
+        console.error('解析用户信息失败:', error)
+        // 设置默认值
+        userInfo.name = '管理员'
+        userInfo.role = '系统管理员'
     }
 }
 
 onMounted(() => {
     loadUserInfo()
+    loadMenus() // 加载菜单数据
 })
 </script>
 

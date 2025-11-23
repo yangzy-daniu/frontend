@@ -26,27 +26,6 @@ html, body {
 </style>
 
 
-<!--<template>-->
-<!--    <div id="app">-->
-<!--        <UserCrud />-->
-<!--    </div>-->
-<!--</template>-->
-
-<!--<script setup>-->
-<!--import UserCrud from './components/UserCrud.vue'-->
-<!--</script>-->
-
-<!--<style>-->
-<!--#app {-->
-<!--    font-family: Avenir, Helvetica, Arial, sans-serif;-->
-<!--    -webkit-font-smoothing: antialiased;-->
-<!--    -moz-osx-font-smoothing: grayscale;-->
-<!--    color: #2c3e50;-->
-<!--    margin-top: 60px;-->
-<!--}-->
-<!--</style>-->
-
-
 <!--<script setup>-->
 <!--import HelloWorld from './components/HelloWorld.vue'-->
 <!--</script>-->

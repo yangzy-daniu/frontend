@@ -7,4 +7,5 @@ export const getMenuById = (id) => request.get(`/menus/${id}`)
 export const createMenu = (data) => request.post('/menus', data)
 export const updateMenu = (id, data) => request.put(`/menus/${id}`, data)
 export const deleteMenu = (id) => request.delete(`/menus/${id}`)
-export const batchDeleteMenus = (ids) => request.post('/menus/batch-delete', ids)
+// 如果需要搜索功能，可以添加
+export const searchMenus = (name) => request.get('/menus/search', { params: { name } })

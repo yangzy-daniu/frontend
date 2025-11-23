@@ -2,7 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Login from '@/components/Login.vue'
 import Layout from '@/components/Layout.vue'
 import Home from '@/components/Home.vue'
-import UserCrud from '@/components/UserCrud.vue'
+import userManagement from '@/components/UserManagement.vue'
+import menuManagement from '@/components/MenuManagement.vue'
 
 const routes = [
     {
@@ -22,10 +23,16 @@ const routes = [
                 meta: { title: '首页' }
             },
             {
-                path: 'user-crud',
-                name: 'UserCrud',
-                component: UserCrud,
+                path: 'user',
+                name: 'userManagement',
+                component: userManagement,
                 meta: { title: '用户管理' }
+            },
+            {
+                path: 'menu',
+                name: 'menuManagement',
+                component: menuManagement,
+                meta: { title: '菜单管理' }
             }
         ]
     }

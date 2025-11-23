@@ -95,7 +95,12 @@ const handleLogin = async () => {
             ElMessage.success('登录成功')
             // 存储token和用户信息
             localStorage.setItem('token', response.data.token)
-            localStorage.setItem('user', JSON.stringify(response.data.user))
+            localStorage.setItem('userInfo', JSON.stringify(response.data.user))
+            // 存储完整的用户信息，供首页使用
+            // localStorage.setItem('userInfo', JSON.stringify({
+            //     name: response.data.user.name,
+            //     role: response.data.user.role
+            // }))
             // 跳转到首页
             // window.location.href = '/home'
             // 使用 Vue Router 跳转到首页

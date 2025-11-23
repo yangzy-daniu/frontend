@@ -33,6 +33,9 @@ request.interceptors.response.use(
                 // 使用window.location跳转，避免router依赖
                 window.location.href = '/login'
             }
+            if (error.response?.status === 403) {
+                ElMessage.error('没有权限访问该资源')
+            }
             return Promise.reject(error)
         }
 )

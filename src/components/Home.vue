@@ -50,7 +50,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { User, Key, Menu } from '@element-plus/icons-vue'
-import { getUserInfo } from '@/api/user'
+import {ElMessage} from "element-plus";
 
 const router = useRouter()
 const userInfo = ref({
@@ -67,17 +67,28 @@ const welcomeMessage = computed(() => {
     return '晚上好！注意休息！'
 })
 
-const loadUserInfo = async () => {
+const loadUserInfo = () => {
     try {
-        const response = await getUserInfo()
-        userInfo.value = response.data
+        const storedUserInfo = localStorage.getItem('userInfo')
+        if (storedUserInfo) {
+            userInfo.value = JSON.parse(storedUserInfo)
+        } else {
+            // 如果本地没有用户信息，设置默认值
+            userInfo.value = {
+                name: '管理员',
+                role: '系统管理员'
+            }
+        }
     } catch (error) {
-        console.error('获取用户信息失败:', error)
+        console.error('解析用户信息失败:', error)
+        userInfo.value = {
+            name: '管理员',
+            role: '系统管理员'
+        }
     }
 }
-
 const goToUserManagement = () => {
-    router.push('/user-crud')
+    router.push('/user')
 }
 
 const goToRoleManagement = () => {
@@ -86,8 +97,8 @@ const goToRoleManagement = () => {
 }
 
 const goToMenuManagement = () => {
-    // router.push('/menu')
-    ElMessage.info('菜单管理功能开发中...')
+    router.push('/menu')
+    // ElMessage.info('菜单管理功能开发中...')
 }
 
 onMounted(() => {
