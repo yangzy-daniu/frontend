@@ -34,7 +34,7 @@
                             </template>
                             <el-descriptions :column="2" border>
                                 <el-descriptions-item label="登录用户">{{ userInfo.name }}</el-descriptions-item>
-                                <el-descriptions-item label="用户角色">{{ userInfo.role }}</el-descriptions-item>
+                                <el-descriptions-item label="用户角色">{{ userInfo.roleName }}</el-descriptions-item>
                                 <el-descriptions-item label="登录时间">{{ loginTime }}</el-descriptions-item>
                                 <el-descriptions-item label="系统版本">v1.0.0</el-descriptions-item>
                             </el-descriptions>
@@ -55,7 +55,7 @@ import {ElMessage} from "element-plus";
 const router = useRouter()
 const userInfo = ref({
     name: '',
-    role: ''
+    roleName: ''
 })
 
 const loginTime = ref(new Date().toLocaleString())
@@ -76,7 +76,7 @@ const loadUserInfo = () => {
             // 如果本地没有用户信息，设置默认值
             userInfo.value = {
                 name: '管理员',
-                role: '系统管理员'
+                roleName: '系统管理员'
             }
         }
     } catch (error) {
