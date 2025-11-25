@@ -24,6 +24,18 @@ const routes = [
                 meta: { title: '首页' }
             },
             {
+                path: '/analysis',
+                name: 'Analysis',
+                component: () => import('../components/AnalysisPage.vue'),
+                meta: { title: '分析页' }
+            },
+            {
+                path: '/profile',
+                name: 'Profile',
+                component: () => import('../components/ProfilePage.vue'),
+                meta: { title: '个人中心' }
+            },
+            {
                 path: 'user',
                 name: 'userManagement',
                 component: userManagement,
