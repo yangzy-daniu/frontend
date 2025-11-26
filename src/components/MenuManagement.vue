@@ -189,9 +189,11 @@ import {getMenuTree, createMenu, updateMenu, deleteMenu, searchMenus} from '@/ap
 
 // 常用图标列表
 const iconList = ref([
-    'House', 'Setting', 'User', 'Key', 'Menu', 'Document',
-    'Fold', 'Expand', 'ArrowDown', 'Search', 'Plus', 'Edit',
-    'Delete', 'Refresh', 'Lock', 'Unlock', 'Message', 'Notification'
+    'House', 'Setting', 'User', 'Key', 'Menu', 'Document','Fold','Histogram','Opportunity',
+    'Expand', 'ArrowDown', 'Search', 'Plus', 'Edit','Delete', 'Refresh',
+    'Lock', 'Unlock', 'Message', 'Notification','TrendCharts','ShoppingCart',
+    'Goods','List','Top','Bottom','Monitor','Wallet','Money','DataAnalysis',
+    'UserFilled','Collection','Document','Tools','Notebook','Operation','DataBoard'
 ])
 
 const loading = ref(false)

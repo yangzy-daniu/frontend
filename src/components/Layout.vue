@@ -92,6 +92,19 @@ import {
     Setting,
     User,
     Key,
+    TrendCharts,
+    ShoppingCart,
+    Top,
+    Bottom,
+    Monitor,
+    Wallet,
+    Money,
+    Tools,
+    Notebook,
+    Operation,
+    DataBoard,
+    Histogram,
+    Opportunity,
     Menu as MenuIcon
 } from '@element-plus/icons-vue'
 import { logout } from '@/api/author'
@@ -111,6 +124,13 @@ const userInfo = reactive({
 // 菜单数据
 const menus = ref([])
 
+// 添加权限检查方法
+const hasPermission = (permission) => {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+    // 根据实际权限逻辑调整
+    return userInfo.role === 'admin' || userInfo.role === 'super'
+}
+
 // 过滤可用菜单的函数
 const filterAvailableMenus = (menuList) => {
     return menuList.filter(menu => {
@@ -118,7 +138,10 @@ const filterAvailableMenus = (menuList) => {
         if (menu.available === false) {
             return false
         }
-
+        // 新增权限检查
+        if (menu.permission && !hasPermission(menu.permission)) {
+            return false
+        }
         // 如果有子菜单，递归过滤
         if (menu.children && menu.children.length > 0) {
             menu.children = filterAvailableMenus(menu.children)

@@ -1,12 +1,12 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import { fileURLToPath, URL } from 'node:url'   // ← 新增
+import { defineConfig } from 'vite'// Vite 提供的类型提示辅助函数，用于配置智能提示。
+import vue from '@vitejs/plugin-vue'// Vite 的 Vue.js 插件，支持 Vue 单文件组件（SFC）
+import { fileURLToPath, URL } from 'node:url'// Node.js 模块，用于处理文件路径和 URL 转换
 
 export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))  // ← 关键
+      '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
   server: {
@@ -16,7 +16,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:9090',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api')
+        rewrite: (path) => path.replace(/^\/api/, '')
       }
     }
   },

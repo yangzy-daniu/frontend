@@ -18,39 +18,81 @@ const routes = [
         redirect: '/home',
         children: [
             {
-                path: 'home',
-                name: 'Home',
+                path: '/home',
+                name: 'home',
                 component: Home,
-                meta: { title: '首页' }
+                meta: { title: '首页', icon: 'House' }
             },
             {
-                path: '/analysis',
-                name: 'Analysis',
-                component: () => import('../components/AnalysisPage.vue'),
-                meta: { title: '分析页' }
+                path: '/workstation',
+                name: 'workstation',
+                component: () => import('../components/Workstation.vue'),
+                meta: { title: '工作台', icon: 'Monitor', permission: 'analysis:view' }
             },
             {
                 path: '/profile',
-                name: 'Profile',
+                name: 'profile',
                 component: () => import('../components/ProfilePage.vue'),
-                meta: { title: '个人中心' }
+                meta: { title: '个人中心', icon: 'User' }
             },
             {
-                path: 'user',
+                path: '/dashboard',
+                name: 'dashboard',
+                component: () => import('../components/Dashboard.vue'),
+                meta: { title: '数据概览', icon: 'DataAnalysis' }
+            },
+            {
+                path: '/sysA',
+                name: 'systemAnalysis',
+                component: () => import('../components/SystemAnalysis.vue'),
+                meta: { title: '系统分析', icon: 'Histogram', permission: 'analysis:view' }
+            },
+            {
+                path: '/userA',
+                name: 'userAnalysis',
+                component: () => import('../components/UserAnalysis.vue'),
+                meta: { title: '用户分析', icon: 'PieChart', permission: 'analysis:view' }
+            },
+            {
+                path: '/order',
+                name: 'orderManagement',
+                component: () => import('../components/OrderManagement.vue'),
+                meta: { title: '订单管理', icon: 'ShoppingCart', permission: 'order:view' }
+            },
+            {
+                path: '/user',
                 name: 'userManagement',
                 component: userManagement,
-                meta: { title: '用户管理' }
+                meta: { title: '用户管理', icon: 'User' }
             },
             {
-                path: 'role',
+                path: '/role',
                 component: roleManagement,
-                meta: { title: '角色管理', requiresAuth: true }
+                meta: { title: '角色管理', icon: 'Key', requiresAuth: true }
             },
             {
-                path: 'menu',
+                path: '/menu',
                 name: 'menuManagement',
                 component: menuManagement,
-                meta: { title: '菜单管理' }
+                meta: { title: '菜单管理', icon: 'Menu' }
+            },
+            {
+                path: '/system',
+                name: 'system',
+                component: () => import('../components/SystemSettings.vue'),
+                meta: { title: '系统设置', icon: 'Tools' }
+            },
+            {
+                path: '/auditLogs',
+                name: 'auditLogs',
+                component: () => import('../components/AuditLogs.vue'),
+                meta: { title: '操作日志', icon: 'Operation' }
+            },
+            {
+                path: '/sysLogs',
+                name: 'sysLogs',
+                component: () => import('../components/SystemLogs.vue'),
+                meta: { title: '系统日志', icon: 'DataBoard' }
             }
         ]
     }
