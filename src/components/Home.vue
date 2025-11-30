@@ -110,15 +110,15 @@
                     </div>
                     <div class="user-stats">
                         <div class="stat-item">
-                            <span class="stat-value">12</span>
+                            <span class="stat-value">{{ todayAccess }}</span>
                             <span class="stat-label">今日访问</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-value">28</span>
+                            <span class="stat-value">{{ monthOperations }}</span>
                             <span class="stat-label">本月操作</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-value">95%</span>
+                            <span class="stat-value">{{ completionRate }}%</span>
                             <span class="stat-label">完成率</span>
                         </div>
                     </div>
@@ -135,19 +135,21 @@
                     <div class="system-info-list">
                         <div class="info-item">
                             <span class="info-label">系统版本</span>
-                            <span class="info-value">v2.1.0</span>
+                            <span class="info-value">{{ systemInfo.systemVersion }}</span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">最后更新</span>
-                            <span class="info-value">2023-10-15</span>
+                            <span class="info-value">{{ systemInfo.lastUpdate }}</span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">在线用户</span>
-                            <span class="info-value">24</span>
+                            <span class="info-value">{{ systemInfo.onlineUsers }}</span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">系统状态</span>
-                            <el-tag type="success" size="small">运行正常</el-tag>
+                            <el-tag :type="systemInfo.systemStatus === '运行正常' ? 'success' : 'danger'" size="small">
+                                {{ systemInfo.systemStatus }}
+                            </el-tag>
                         </div>
                     </div>
                 </el-card>
@@ -166,7 +168,7 @@
                                 <el-icon><User /></el-icon>
                             </div>
                             <div class="stat-data">
-                                <span class="stat-number">156</span>
+                                <span class="stat-number">{{ formatNumber(systemStats.totalUsers) }}</span>
                                 <span class="stat-title">总用户数</span>
                             </div>
                         </div>
@@ -175,7 +177,7 @@
                                 <el-icon><Key /></el-icon>
                             </div>
                             <div class="stat-data">
-                                <span class="stat-number">12</span>
+                                <span class="stat-number">{{ formatNumber(systemStats.totalRoles) }}</span>
                                 <span class="stat-title">角色数量</span>
                             </div>
                         </div>
@@ -184,7 +186,7 @@
                                 <el-icon><Menu /></el-icon>
                             </div>
                             <div class="stat-data">
-                                <span class="stat-number">24</span>
+                                <span class="stat-number">{{ formatNumber(systemStats.totalMenus) }}</span>
                                 <span class="stat-title">菜单项</span>
                             </div>
                         </div>
@@ -193,7 +195,7 @@
                                 <el-icon><Document /></el-icon>
                             </div>
                             <div class="stat-data">
-                                <span class="stat-number">1,258</span>
+                                <span class="stat-number">{{ formatNumber(systemStats.totalLogs) }}</span>
                                 <span class="stat-title">操作日志</span>
                             </div>
                         </div>
@@ -207,6 +209,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { getDashboardStats, getSystemStats } from '@/api/stats'
+import { getSystemInfo } from '@/api/system'
 import {
     User, Key, Menu, DataAnalysis,
     UserFilled, Monitor, TrendCharts,
@@ -221,14 +225,52 @@ const userInfo = ref({
 })
 
 const loginTime = ref(new Date().toLocaleString())
+const todayAccess = ref(0)
+const monthOperations = ref(0)
+const completionRate = ref(0)
+const recentActivities = ref([])
 
-// 模拟最近活动数据
-const recentActivities = ref([
-    { description: '修改了用户"张三"的权限', time: '10分钟前' },
-    { description: '创建了新角色"内容编辑"', time: '2小时前' },
-    { description: '更新了系统菜单结构', time: '昨天' },
-    { description: '登录系统', time: loginTime.value }
-])
+// 添加快速统计数据
+const systemStats = ref({
+    totalUsers: 0,
+    totalRoles: 0,
+    totalMenus: 0,
+    totalLogs: 0
+})
+// 添加系统信息数据
+const systemInfo = ref({
+    systemVersion: 'v2.1.0',
+    lastUpdate: '2023-10-15',
+    onlineUsers: 24,
+    systemStatus: '运行正常'
+})
+
+// 加载系统信息
+const loadSystemInfo = async () => {
+    try {
+        const response = await getSystemInfo()
+        console.log('系统信息响应:', response) // 调试日志
+        // 根据实际响应结构调整
+        const data = response.data || response
+        systemInfo.value = {
+            systemVersion: data.systemVersion || 'v2.1.0',
+            lastUpdate: data.lastUpdate || '2023-10-15',
+            onlineUsers: data.onlineUsers || 0,
+            systemStatus: data.systemStatus === 'RUNNING' ? '运行正常' : '系统异常'
+        }
+    } catch (error) {
+        console.error('获取系统信息失败:', error)
+        // 使用默认值
+    }
+}
+
+// // 模拟最近活动数据
+// const recentActivities = ref([
+//     { description: '修改了用户"张三"的权限', time: '10分钟前' },
+//     { description: '创建了新角色"内容编辑"', time: '2小时前' },
+//     { description: '更新了系统菜单结构', time: '昨天' },
+//     { description: '登录系统', time: loginTime.value }
+// ])
 
 const welcomeMessage = computed(() => {
     const hour = new Date().getHours()
@@ -239,7 +281,7 @@ const welcomeMessage = computed(() => {
     return '晚上好！注意休息！'
 })
 
-const loadUserInfo = () => {
+const loadUserInfo = async () => {
     try {
         const storedUserInfo = localStorage.getItem('userInfo')
         if (storedUserInfo) {
@@ -262,6 +304,56 @@ const loadUserInfo = () => {
     }
 }
 
+const loadDashboardStats = async () => {
+    try {
+        const response = await getDashboardStats()
+        todayAccess.value = response.data.todayAccess || 0
+        monthOperations.value = response.data.monthOperations || 0
+        completionRate.value = response.data.completionRate || 0
+        recentActivities.value = response.data.recentActivities || []
+
+        // 如果最近活动为空，添加登录记录
+        if (recentActivities.value.length === 0) {
+            recentActivities.value.push({
+                description: '登录系统',
+                time: '刚刚'
+            })
+        }
+    } catch (error) {
+        console.error('获取仪表盘数据失败:', error)
+        // 如果API调用失败，使用默认数据
+        todayAccess.value = 1
+        monthOperations.value = 0
+        completionRate.value = 95
+        recentActivities.value = [
+            { description: '登录系统', time: '刚刚' }
+        ]
+    }
+}
+
+const loadSystemStats = async () => {
+    try {
+        const response = await getSystemStats()
+        systemStats.value = response.data
+        console.log('系统统计数据加载成功:', systemStats.value)
+    } catch (error) {
+        console.error('获取系统统计数据失败:', error)
+        // 使用默认值
+        systemStats.value = {
+            totalUsers: 156,
+            totalRoles: 12,
+            totalMenus: 24,
+            totalLogs: 1258
+        }
+    }
+}
+
+// 添加数字格式化方法
+const formatNumber = (num) => {
+    if (!num && num !== 0) return '0'
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
 const goToUserManagement = () => {
     router.push('/user')
 }
@@ -278,8 +370,11 @@ const goToDashboard = () => {
     router.push('/sysA')
 }
 
-onMounted(() => {
-    loadUserInfo()
+onMounted(async () => {
+    await loadUserInfo()
+    await loadDashboardStats()
+    await loadSystemStats()
+    await loadSystemInfo()
 })
 </script>
 
