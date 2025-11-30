@@ -31,9 +31,9 @@
                             style="width: 140px"
                     >
                         <el-option label="普通用户" value="user" />
-                        <el-option label="管理员" value="admin" />
+                        <el-option label="访客" value="guest" />
+                        <el-option label="系统管理" value="admin" />
                         <el-option label="超级管理员" value="super" />
-                        <el-option label="系统管理" value="system" />
                     </el-select>
                 </el-form-item>
                 <el-form-item>
@@ -64,22 +64,22 @@
                     <template #default="scope">
                         <!-- 保持原有 admin/user 颜色，新增两种角色用 warning / success 区分 -->
                         <el-tag
-                            :type="scope.row.role === 'admin'
+                            :type="scope.row.roleCode === 'admin'
                             ? 'danger'
-                            : scope.row.role === 'user'
+                            : scope.row.roleCode === 'user'
                             ? 'primary'
-                            : scope.row.role === 'super'
+                            : scope.row.roleCode === 'super'
                             ? 'warning'
                             : 'success'"
                         >
                             {{
-                                scope.row.role === 'admin'
-                                        ? '管理员'
-                                        : scope.row.role === 'user'
+                                scope.row.roleCode === 'admin'
+                                        ? '系统管理'
+                                        : scope.row.roleCode === 'user'
                                                 ? '普通用户'
-                                                : scope.row.role === 'super'
+                                                : scope.row.roleCode === 'super'
                                                         ? '超级管理员'
-                                                        : '系统管理'
+                                                        : '访客'
                             }}
                         </el-tag>
                     </template>
@@ -171,9 +171,9 @@
                 <el-form-item label="角色" prop="role">
                     <el-radio-group v-model="userForm.role">
                         <el-radio label="user">普通用户</el-radio>
-                        <el-radio label="admin">管理员</el-radio>
+                        <el-radio label="guest">访客</el-radio>
+                        <el-radio label="admin">系统管理</el-radio>
                         <el-radio label="super">超级管理员</el-radio>
-                        <el-radio label="system">系统管理</el-radio>
                     </el-radio-group>
                 </el-form-item>
             </el-form>
@@ -356,7 +356,7 @@ const handleEdit = (row) => {
         password: '',
         confirmPassword: '',
         name: row.name,
-        role: row.role
+        roleCode: row.roleCode
     })
     dialogVisible.value = true
 }

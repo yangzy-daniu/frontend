@@ -108,7 +108,7 @@ import {
     Menu as MenuIcon
 } from '@element-plus/icons-vue'
 import { logout } from '@/api/author'
-import { getMenuTree } from '@/api/menu'
+import { getUserMenus } from '@/api/menu'
 
 const router = useRouter()
 const route = useRoute()
@@ -179,7 +179,7 @@ const transformMenuData = (menuList) => {
 const loadMenus = async () => {
     try {
         // 调用菜单树接口
-        const response = await getMenuTree()
+        const response = await getUserMenus()
 
         if (response.data && response.data.length > 0) {
             // 过滤可用菜单并转换格式
@@ -278,7 +278,7 @@ const loadUserInfo = () => {
                 // 同时更新到新的存储格式
                 localStorage.setItem('userInfo', JSON.stringify({
                     name: userData.name,
-                    role: userData.role,
+                    role: userData.roleName,
                     avatar: userData.avatar || '',
                     username: userData.username || ''
                 }))

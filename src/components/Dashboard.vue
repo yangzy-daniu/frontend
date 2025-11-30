@@ -97,19 +97,19 @@ import {
     Wallet,
     Top,
     Bottom,
-    Monitor
+    Money
 } from '@element-plus/icons-vue'
 
 // 模拟数据
 const statsData = ref([
     {
-        name: 'users',
-        label: '总用户数',
-        value: '1,234',
-        change: '+12%',
+        name: 'orders',
+        label: '总订单数',
+        value: '5,678',
+        change: '+15.2%',
         trend: 'up',
         color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        icon: User
+        icon: ShoppingCart
     },
     {
         name: 'orders',
@@ -130,13 +130,13 @@ const statsData = ref([
         icon: Wallet
     },
     {
-        name: 'growth',
-        label: '增长率',
-        value: '23.5%',
+        name: 'totalRevenue',
+        label: '总收入',
+        value: '¥1,234,789',
         change: '-2.1%',
         trend: 'down',
         color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-        icon: TrendCharts
+        icon: Money
     }
 ])
 

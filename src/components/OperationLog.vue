@@ -2,53 +2,9 @@
     <div class="operation-log-container">
         <el-card class="search-card" shadow="never">
             <el-form :model="searchForm" :inline="true" label-width="80px">
-                <el-form-item label="模块名称">
-                    <el-select v-model="searchForm.module" placeholder="请选择模块" clearable>
-                        <el-option label="用户管理" value="用户管理" />
-                        <el-option label="订单管理" value="订单管理" />
-                        <el-option label="角色管理" value="角色管理" />
-                        <el-option label="系统管理" value="系统管理" />
-                    </el-select>
-                </el-form-item>
-
-                <el-form-item label="操作类型">
-                    <el-select v-model="searchForm.type" placeholder="请选择操作类型" clearable>
-                        <el-option label="CREATE" value="CREATE" />
-                        <el-option label="UPDATE" value="UPDATE" />
-                        <el-option label="DELETE" value="DELETE" />
-                        <el-option label="QUERY" value="QUERY" />
-                        <el-option label="LOGIN" value="LOGIN" />
-                    </el-select>
-                </el-form-item>
-
+                <!-- 第一行：操作者和时间范围 -->
                 <el-form-item label="操作者">
-                    <el-input v-model="searchForm.operator" placeholder="请输入操作者" clearable />
-                </el-form-item>
-
-                <el-form-item label="请求方法">
-                    <el-select v-model="searchForm.requestMethod" placeholder="请选择请求方法" clearable>
-                        <el-option label="GET" value="GET" />
-                        <el-option label="POST" value="POST" />
-                        <el-option label="PUT" value="PUT" />
-                        <el-option label="DELETE" value="DELETE" />
-                    </el-select>
-                </el-form-item>
-
-                <el-form-item label="状态码">
-                    <el-select v-model="searchForm.statusCode" placeholder="请选择状态码" clearable>
-                        <el-option label="200" value="200" />
-                        <el-option label="400" value="400" />
-                        <el-option label="401" value="401" />
-                        <el-option label="403" value="403" />
-                        <el-option label="500" value="500" />
-                    </el-select>
-                </el-form-item>
-
-                <el-form-item label="操作结果">
-                    <el-select v-model="searchForm.result" placeholder="请选择操作结果" clearable>
-                        <el-option label="SUCCESS" value="SUCCESS" />
-                        <el-option label="FAILURE" value="FAILURE" />
-                    </el-select>
+                    <el-input v-model="searchForm.operator" placeholder="请输入操作者" clearable style="width: 200px" />
                 </el-form-item>
 
                 <el-form-item label="时间范围">
@@ -59,7 +15,55 @@
                             start-placeholder="开始时间"
                             end-placeholder="结束时间"
                             value-format="YYYY-MM-DD HH:mm:ss"
+                            style="width: 400px"
                     />
+                </el-form-item>
+
+                <el-form-item label="模块名称">
+                    <el-select v-model="searchForm.module" placeholder="请选择模块" clearable style="width: 200px">
+                        <el-option label="订单管理" value="订单管理" />
+                        <el-option label="用户管理" value="用户管理" />
+                        <el-option label="角色管理" value="角色管理" />
+                        <el-option label="系统管理" value="系统管理" />
+                        <el-option label="系统设置" value="系统设置" />
+                        <el-option label="个人中心" value="个人中心" />
+                    </el-select>
+                </el-form-item>
+
+                <el-form-item label="操作类型">
+                    <el-select v-model="searchForm.type" placeholder="请选择操作类型" clearable style="width: 200px">
+                        <el-option label="CREATE" value="CREATE" />
+                        <el-option label="UPDATE" value="UPDATE" />
+                        <el-option label="DELETE" value="DELETE" />
+                        <el-option label="QUERY" value="QUERY" />
+                        <el-option label="LOGIN" value="LOGIN" />
+                    </el-select>
+                </el-form-item>
+
+                <el-form-item label="请求方法">
+                    <el-select v-model="searchForm.requestMethod" placeholder="请选择请求方法" clearable style="width: 200px">
+                        <el-option label="GET" value="GET" />
+                        <el-option label="POST" value="POST" />
+                        <el-option label="PUT" value="PUT" />
+                        <el-option label="DELETE" value="DELETE" />
+                    </el-select>
+                </el-form-item>
+
+                <el-form-item label="操作结果">
+                    <el-select v-model="searchForm.result" placeholder="请选择操作结果" clearable style="width: 200px">
+                        <el-option label="SUCCESS" value="SUCCESS" />
+                        <el-option label="FAILURE" value="FAILURE" />
+                    </el-select>
+                </el-form-item>
+
+                <el-form-item label="状态码">
+                    <el-select v-model="searchForm.statusCode" placeholder="请选择状态码" clearable style="width: 200px">
+                        <el-option label="200" value="200" />
+                        <el-option label="400" value="400" />
+                        <el-option label="401" value="401" />
+                        <el-option label="403" value="403" />
+                        <el-option label="500" value="500" />
+                    </el-select>
                 </el-form-item>
 
                 <el-form-item>
@@ -98,12 +102,13 @@
                     stripe
                     style="width: 100%"
                     @sort-change="handleSortChange"
+                    :default-sort="{ prop: 'id', order: 'ascending' }"
             >
-                <el-table-column prop="id" label="ID" width="80" sortable="custom" />
+                <el-table-column prop="id" label="ID" width="80" sortable="custom" align="center" />
 
-                <el-table-column prop="module" label="模块" width="120">
+                <el-table-column prop="module" label="模块" width="120" align="center">
                     <template #default="{ row }">
-                        <el-tag size="small">{{ row.module }}</el-tag>
+                        <el-tag class="module-tag" :class="getModuleColor(row.module)"  size="small">{{ row.module }}</el-tag>
                     </template>
                 </el-table-column>
 
@@ -114,8 +119,6 @@
                         <el-tag type="info" size="small">{{ row.operator }}</el-tag>
                     </template>
                 </el-table-column>
-
-                <el-table-column prop="operatorIp" label="IP地址" width="140" />
 
                 <el-table-column prop="requestMethod" label="请求方法" width="100">
                     <template #default="{ row }">
@@ -128,8 +131,6 @@
                     </template>
                 </el-table-column>
 
-                <el-table-column prop="requestUrl" label="请求路径" min-width="180" show-overflow-tooltip />
-
                 <el-table-column prop="statusCode" label="状态码" width="100">
                     <template #default="{ row }">
                         <el-tag
@@ -141,7 +142,7 @@
                     </template>
                 </el-table-column>
 
-                <el-table-column prop="executionTime" label="响应时间" width="100" sortable="custom">
+                <el-table-column prop="executionTime" label="响应时间" width="180" sortable="custom" align="center">
                     <template #default="{ row }">
                         {{ row.executionTime }}ms
                     </template>
@@ -164,7 +165,7 @@
                     </template>
                 </el-table-column>
 
-                <el-table-column label="操作" width="120" fixed="right">
+                <el-table-column label="操作" width="120" fixed="right" align="center">
                     <template #default="{ row }">
                         <el-button
                                 link
@@ -206,7 +207,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, Download } from '@element-plus/icons-vue'
 import LogDetailDialog from './LogDetailDialog.vue'
-import { getOperationLogs } from '@/api/operationLog'
+import { getOperationLogs, exportOperationLogs } from '@/api/operationLog'
 
 // 搜索表单
 const searchForm = reactive({
@@ -407,11 +408,55 @@ const handleSortChange = (sortInfo) => {
 }
 
 const refreshData = () => {
-    loadData()
+    // 保存当前搜索条件和分页状态
+    const currentPage = pagination.current
+    const currentSize = pagination.size
+
+    loadData().then(() => {
+        // 刷新后保持当前页码和页数
+        pagination.current = currentPage
+        pagination.size = currentSize
+    })
 }
 
-const exportData = () => {
-    ElMessage.info('导出功能开发中...')
+const exportData = async () => {
+    try {
+        loading.value = true
+
+        const params = {
+            page: pagination.current,
+            size: pagination.size,
+            ...searchForm
+        }
+
+        // 处理时间范围
+        if (searchForm.timeRange && searchForm.timeRange.length === 2) {
+            params.startTime = searchForm.timeRange[0]
+            params.endTime = searchForm.timeRange[1]
+        }
+
+        const response = await exportOperationLogs(params)
+
+        // 创建下载链接
+        const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+
+        link.setAttribute('href', url)
+        link.setAttribute('download', `operation_logs_${new Date().getTime()}.csv`)
+        link.style.visibility = 'hidden'
+
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        ElMessage.success('导出成功')
+    } catch (error) {
+        console.error('导出失败:', error)
+        ElMessage.error('导出失败')
+    } finally {
+        loading.value = false
+    }
 }
 
 const handleViewDetail = (row) => {
@@ -428,6 +473,32 @@ const getMethodType = (method) => {
         'DELETE': 'danger'
     }
     return typeMap[method] || 'info'
+}
+
+
+const moduleColors = {
+    '用户管理': 'primary',
+    '角色管理': 'success',
+    '系统管理': 'warning',
+    '系统设置': 'danger',
+    '个人中心': 'info',
+    '订单管理': '',
+    // 预留更多颜色
+}
+
+const getModuleColor = (module) => {
+    const moduleMap = {
+        '用户管理': 'color-user',
+        '角色管理': 'color-role',
+        '订单管理': 'color-order',
+        '系统设置': 'color-settings',
+        '个人中心': 'color-profile',
+        '菜单管理': 'color-menu',
+        '登录系统': 'color-login',
+        '注册用户': 'color-register',
+        '其他': 'color-other'
+    }
+    return moduleMap[module] || 'color-default'
 }
 
 const getStatusCodeType = (statusCode) => {
@@ -475,5 +546,106 @@ onMounted(() => {
 
 :deep(.el-form-item) {
     margin-bottom: 16px;
+}
+
+:deep(.el-select) {
+    width: 100%;
+}
+
+/* 自定义模块颜色 */
+.module-tag.color-user {
+    background-color: #409EFF !important;
+    color: white !important;
+    border: none !important;
+}
+
+.module-tag.color-role {
+    background-color: #67C23A !important;
+    color: white !important;
+    border: none !important;
+}
+
+.module-tag.color-system {
+    background-color: #E6A23C !important;
+    color: white !important;
+    border: none !important;
+}
+
+.module-tag.color-settings {
+    background-color: #F56C6C !important;
+    color: white !important;
+    border: none !important;
+}
+
+.module-tag.color-profile {
+    background-color: #909399 !important;
+    color: white !important;
+    border: none !important;
+}
+
+.module-tag.color-order {
+    background-color: #8E44AD !important;
+    color: white !important;
+    border: none !important;
+}
+
+.module-tag.color-product {
+    background-color: #16A085 !important;
+    color: white !important;
+    border: none !important;
+}
+
+.module-tag.color-inventory {
+    background-color: #D35400 !important;
+    color: white !important;
+    border: none !important;
+}
+
+.module-tag.color-finance {
+    background-color: #C0392B !important;
+    color: white !important;
+    border: none !important;
+}
+
+.module-tag.color-report {
+    background-color: #7F8C8D !important;
+    color: white !important;
+    border: none !important;
+}
+
+.module-tag.color-default {
+    background-color: #BDC3C7 !important;
+    color: white !important;
+    border: none !important;
+}
+
+.module-tag.color-menu {
+    background-color: #9B59B6 !important;
+    color: white !important;
+    border: none !important;
+}
+
+.module-tag.color-login {
+    background-color: #3498DB !important;
+    color: white !important;
+    border: none !important;
+}
+
+.module-tag.color-register {
+    background-color: #2ECC71 !important;
+    color: white !important;
+    border: none !important;
+}
+
+.module-tag.color-other {
+    background-color: #95A5A6 !important;
+    color: white !important;
+    border: none !important;
+}
+
+.module-tag.color-default {
+    background-color: #BDC3C7 !important;
+    color: white !important;
+    border: none !important;
 }
 </style>

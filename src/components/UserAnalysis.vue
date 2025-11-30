@@ -104,14 +104,14 @@
                 <el-card class="stats-card" shadow="hover">
                     <div class="stats-content">
                         <div class="stats-icon revenue-icon">
-                            <el-icon><Money /></el-icon>
+                            <el-icon><TrendCharts /></el-icon>
                         </div>
                         <div class="stats-info">
-                            <div class="stats-value">¥{{ formatNumber(stats.totalRevenue) }}</div>
-                            <div class="stats-label">总收入</div>
-                            <div class="stats-change" :class="getChangeClass(stats.revenueGrowth)">
-                                <el-icon><Top v-if="stats.revenueGrowth >= 0" /><Bottom v-else /></el-icon>
-                                {{ Math.abs(stats.revenueGrowth) }}%
+                            <div class="stats-value">{{ formatNumber(stats.totalRevenue) }}%</div>
+                            <div class="stats-label">增长率</div>
+                            <div class="stats-change" :class="getChangeClass(stats.growth)">
+                                <el-icon><Top v-if="stats.growth >= 0" /><Bottom v-else /></el-icon>
+                                {{ Math.abs(stats.growth) }}%
                             </div>
                         </div>
                     </div>
@@ -180,7 +180,7 @@
                 <el-card class="table-card" shadow="hover">
                     <template #header>
                         <div class="table-header">
-                            <span>详细访问记录</span>
+                            <span>最近访问记录</span>
                             <el-button type="primary" text @click="showAllLogs">
                                 查看全部
                             </el-button>
@@ -261,42 +261,63 @@
         <el-dialog
                 v-model="logDetailVisible"
                 title="访问记录详情"
-                width="600px"
+                width="700px"
         >
             <div v-if="selectedLog" class="log-detail">
                 <el-descriptions :column="2" border>
-                    <el-descriptions-item label="用户">
+                    <el-descriptions-item label="用户" :span="1">
                         <div class="user-info">
                             <el-avatar :size="32" :src="selectedLog.avatar" :style="{ backgroundColor: getUserColor(selectedLog.username) }">
-                                {{ selectedLog.username.charAt(0).toUpperCase() }}
+                                {{ selectedLog.username?.charAt(0)?.toUpperCase() || 'U' }}
                             </el-avatar>
-                            <span style="margin-left: 8px;">{{ selectedLog.username }}</span>
+                            <span style="margin-left: 8px;">{{ selectedLog.username || '未知用户' }}</span>
                         </div>
                     </el-descriptions-item>
-                    <el-descriptions-item label="IP地址">{{ selectedLog.ipAddress }}</el-descriptions-item>
-                    <el-descriptions-item label="请求方法">
+                    <el-descriptions-item label="IP地址" :span="1">
+                        {{ selectedLog.ipAddress || '未知IP' }}
+                    </el-descriptions-item>
+                    <el-descriptions-item label="请求方法" :span="1">
                         <el-tag :type="getMethodType(selectedLog.accessMethod)">
-                            {{ selectedLog.accessMethod }}
+                            {{ selectedLog.accessMethod || '未知' }}
                         </el-tag>
                     </el-descriptions-item>
-                    <el-descriptions-item label="状态码">
+                    <el-descriptions-item label="状态码" :span="1">
                         <el-tag :type="getStatusType(selectedLog.statusCode)">
-                            {{ selectedLog.statusCode }}
+                            {{ selectedLog.statusCode || '未知' }}
                         </el-tag>
                     </el-descriptions-item>
                     <el-descriptions-item label="请求路径" :span="2">
-                        {{ selectedLog.accessPath }}
+                        <el-text class="path-text">{{ selectedLog.accessPath || '无' }}</el-text>
                     </el-descriptions-item>
                     <el-descriptions-item label="用户代理" :span="2">
-                        <el-text truncated>{{ selectedLog.userAgent }}</el-text>
+                        <el-text class="user-agent-text">{{ selectedLog.userAgent || '无' }}</el-text>
                     </el-descriptions-item>
-                    <el-descriptions-item label="响应时间">
-            <span :class="getResponseTimeClass(selectedLog.responseTime)">
-              {{ selectedLog.responseTime }}ms
-            </span>
+                    <el-descriptions-item label="操作模块" :span="1">
+                        {{ selectedLog.module || '无' }}
                     </el-descriptions-item>
-                    <el-descriptions-item label="访问时间">
+                    <el-descriptions-item label="操作类型" :span="1">
+                        <el-tag>{{ selectedLog.operation || '无' }}</el-tag>
+                    </el-descriptions-item>
+                    <el-descriptions-item label="响应时间" :span="1">
+                <span :class="getResponseTimeClass(selectedLog.responseTime)">
+                    {{ selectedLog.responseTime || 0 }}ms
+                </span>
+                    </el-descriptions-item>
+                    <el-descriptions-item label="操作结果" :span="1">
+                        <el-tag :type="selectedLog.result === 'SUCCESS' ? 'success' : 'danger'">
+                            {{ selectedLog.result === 'SUCCESS' ? '成功' : (selectedLog.result === 'FAILURE' ? '失败' : '未知') }}
+                        </el-tag>
+                    </el-descriptions-item>
+                    <el-descriptions-item label="访问时间" :span="2">
                         {{ formatDateTime(selectedLog.accessTime) }}
+                    </el-descriptions-item>
+                    <el-descriptions-item v-if="selectedLog.errorMessage" label="错误信息" :span="2">
+                        <el-alert
+                                :title="selectedLog.errorMessage"
+                                type="error"
+                                :closable="false"
+                                show-icon
+                        />
                     </el-descriptions-item>
                 </el-descriptions>
             </div>
@@ -307,17 +328,21 @@
 <script setup>
 import { ref, reactive, onMounted, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import {
     User,
     UserFilled,
     ShoppingCart,
-    Money,
+    TrendCharts,
     Top,
     Bottom,
     Download,
     Refresh
 } from '@element-plus/icons-vue'
+import { getRecentLogs } from '@/api/operationLog'
+
+const router = useRouter()
 
 // 响应式数据
 const timeRange = ref('7d')
@@ -344,11 +369,11 @@ const stats = ref({
     totalUsers: 1234,
     activeUsers: 892,
     totalOrders: 5678,
-    totalRevenue: 1234567,
+    totalRevenue: 23.5,
     userGrowth: 12.5,
     activeGrowth: 8.3,
     orderGrowth: 15.2,
-    revenueGrowth: 18.7
+    growth: -2.1
 })
 
 // 分页数据
@@ -358,69 +383,70 @@ const pagination = reactive({
     total: 0
 })
 
-// 模拟访问日志数据
-const accessLogs = ref([
-    {
-        id: 1,
-        username: 'admin',
-        avatar: '',
-        accessMethod: 'GET',
-        accessPath: '/api/users',
-        statusCode: 200,
-        responseTime: 45,
-        accessTime: new Date('2024-01-15 10:30:25'),
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    },
-    {
-        id: 2,
-        username: 'user01',
-        avatar: '',
-        accessMethod: 'POST',
-        accessPath: '/api/orders',
-        statusCode: 201,
-        responseTime: 120,
-        accessTime: new Date('2024-01-15 10:28:15'),
-        ipAddress: '192.168.1.101',
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-    },
-    {
-        id: 3,
-        username: 'user02',
-        avatar: '',
-        accessMethod: 'GET',
-        accessPath: '/api/products',
-        statusCode: 200,
-        responseTime: 32,
-        accessTime: new Date('2024-01-15 10:25:40'),
-        ipAddress: '192.168.1.102',
-        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15'
-    },
-    {
-        id: 4,
-        username: 'admin',
-        avatar: '',
-        accessMethod: 'PUT',
-        accessPath: '/api/users/1',
-        statusCode: 200,
-        responseTime: 78,
-        accessTime: new Date('2024-01-15 10:20:30'),
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    },
-    {
-        id: 5,
-        username: 'user03',
-        avatar: '',
-        accessMethod: 'DELETE',
-        accessPath: '/api/orders/5',
-        statusCode: 204,
-        responseTime: 95,
-        accessTime: new Date('2024-01-15 10:18:22'),
-        ipAddress: '192.168.1.103',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    }
-])
+// 访问日志数据
+const accessLogs = ref([]);
+// const accessLogs = ref([
+//     {
+//         id: 1,
+//         username: 'admin',
+//         avatar: '',
+//         accessMethod: 'GET',
+//         accessPath: '/api/users',
+//         statusCode: 200,
+//         responseTime: 45,
+//         accessTime: new Date('2024-01-15 10:30:25'),
+//         ipAddress: '192.168.1.100',
+//         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+//     },
+//     {
+//         id: 2,
+//         username: 'user01',
+//         avatar: '',
+//         accessMethod: 'POST',
+//         accessPath: '/api/orders',
+//         statusCode: 201,
+//         responseTime: 120,
+//         accessTime: new Date('2024-01-15 10:28:15'),
+//         ipAddress: '192.168.1.101',
+//         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+//     },
+//     {
+//         id: 3,
+//         username: 'user02',
+//         avatar: '',
+//         accessMethod: 'GET',
+//         accessPath: '/api/products',
+//         statusCode: 200,
+//         responseTime: 32,
+//         accessTime: new Date('2024-01-15 10:25:40'),
+//         ipAddress: '192.168.1.102',
+//         userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15'
+//     },
+//     {
+//         id: 4,
+//         username: 'admin',
+//         avatar: '',
+//         accessMethod: 'PUT',
+//         accessPath: '/api/users/1',
+//         statusCode: 200,
+//         responseTime: 78,
+//         accessTime: new Date('2024-01-15 10:20:30'),
+//         ipAddress: '192.168.1.100',
+//         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+//     },
+//     {
+//         id: 5,
+//         username: 'user03',
+//         avatar: '',
+//         accessMethod: 'DELETE',
+//         accessPath: '/api/orders/5',
+//         statusCode: 204,
+//         responseTime: 95,
+//         accessTime: new Date('2024-01-15 10:18:22'),
+//         ipAddress: '192.168.1.103',
+//         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+//     }
+// ])
 
 // 生命周期
 onMounted(() => {
@@ -437,8 +463,24 @@ watch(timeRange, () => {
 const loadData = async () => {
     tableLoading.value = true
     try {
-        // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 800))
+        // 获取最近访问记录
+        const response = await getRecentLogs()
+        accessLogs.value = response.data.map(log => ({
+            id: log.id,
+            username: log.operator,
+            avatar: '',
+            accessMethod: log.requestMethod,
+            accessPath: log.requestUrl,
+            statusCode: log.statusCode,
+            responseTime: log.executionTime,
+            accessTime: log.accessTime || log.createTime,
+            ipAddress: log.operatorIp,
+            userAgent: log.userAgent,
+            operation: log.operation,
+            module: log.module,
+            result: log.result
+        }))
+
         pagination.total = accessLogs.value.length
         updateCharts()
     } catch (error) {
@@ -748,11 +790,26 @@ const refreshData = () => {
 }
 
 const showAllLogs = () => {
-    ElMessage.info('跳转到完整日志页面')
+    router.push('/auditLogs')
 }
 
 const viewLogDetail = (log) => {
-    selectedLog.value = log
+    selectedLog.value = {
+        ...log,
+        // 确保所有字段都有默认值
+        username: log.username || '未知用户',
+        ipAddress: log.ipAddress || '未知IP',
+        accessMethod: log.accessMethod || '未知',
+        statusCode: log.statusCode || 0,
+        accessPath: log.accessPath || '无',
+        userAgent: log.userAgent || '无',
+        module: log.module || '无',
+        operation: log.operation || '无',
+        responseTime: log.responseTime || 0,
+        result: log.result || '未知',
+        accessTime: log.accessTime || new Date(),
+        errorMessage: log.errorMessage || ''
+    }
     logDetailVisible.value = true
 }
 
@@ -912,9 +969,24 @@ window.addEventListener('resize', () => {
     align-items: center;
     gap: 8px;
 }
+/* 确保头像容器始终为圆形 */
+:deep(.el-avatar) {
+    flex-shrink: 0; /* 防止头像被压缩 */
+}
 
 .username {
     font-weight: 500;
+    word-break: keep-all; /* 防止用户名换行 */
+}
+
+/* 在日志详情对话框中也修复同样的问题 */
+.log-detail .user-info {
+    display: flex;
+    align-items: center;
+}
+
+.log-detail .user-info :deep(.el-avatar) {
+    flex-shrink: 0;
 }
 
 .fast {
@@ -938,12 +1010,41 @@ window.addEventListener('resize', () => {
     margin-top: 20px;
 }
 
-.log-detail .user-info {
+.log-detail {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.path-text,
+.user-agent-text {
+    word-break: break-all;
+    white-space: normal;
+}
+
+:deep(.el-descriptions) {
+    margin-top: 10px;
+}
+
+:deep(.el-descriptions__body) {
+    background-color: #fafafa;
+}
+
+:deep(.el-descriptions__label) {
+    font-weight: 600;
+    color: #606266;
+    width: 100px;
+}
+
+:deep(.el-descriptions__content) {
+    color: #303133;
+}
+
+.user-info {
     display: flex;
     align-items: center;
 }
 
-/* 响应式设计 */
+/* 响应式调整 */
 @media (max-width: 768px) {
     .analysis-page {
         padding: 12px;
@@ -973,6 +1074,23 @@ window.addEventListener('resize', () => {
         flex-direction: column;
         gap: 12px;
         align-items: flex-start;
+    }
+
+    /* 移动端表格调整 */
+    .user-cell {
+        min-width: 120px;
+    }
+
+    .log-detail {
+        max-height: 60vh;
+    }
+
+    :deep(.el-descriptions) {
+        font-size: 14px;
+    }
+
+    :deep(.el-descriptions__label) {
+        width: 80px;
     }
 }
 </style>

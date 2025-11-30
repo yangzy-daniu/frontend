@@ -56,7 +56,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import { login } from '@/api/author'
@@ -68,7 +68,7 @@ const loading = ref(false)
 const loginFormRef = ref()
 
 const loginForm = reactive({
-    username: 'admin',
+    username: 'superAdmin',
     password: '123456'
 })
 
@@ -80,6 +80,22 @@ const loginRules = {
         { required: true, message: '请输入密码', trigger: 'blur' }
     ]
 }
+
+// 回车键处理函数
+const handleEnterKey = (event) => {
+    if (event.key === 'Enter') {
+        handleLogin()
+    }
+}
+
+// 添加和移除事件监听器
+onMounted(() => {
+    document.addEventListener('keyup', handleEnterKey)
+})
+
+onUnmounted(() => {
+    document.removeEventListener('keyup', handleEnterKey)
+})
 
 const handleLogin = async () => {
     if (!loginFormRef.value) return
@@ -96,20 +112,19 @@ const handleLogin = async () => {
             // 存储token和用户信息
             localStorage.setItem('token', response.data.token)
             localStorage.setItem('userInfo', JSON.stringify(response.data.user))
-            // 存储完整的用户信息，供首页使用
-            // localStorage.setItem('userInfo', JSON.stringify({
-            //     name: response.data.user.name,
-            //     role: response.data.user.role
-            // }))
-            // 跳转到首页
-            // window.location.href = '/home'
             // 使用 Vue Router 跳转到首页
             await router.push('/home')
         } else {
-            ElMessage.error(response.data.message)
+            ElMessage.error(response.data.message || '登录失败')
         }
     } catch (error) {
-        ElMessage.error('登录失败，请检查网络连接')
+        // 只有网络或系统错误才提示“网络连接”
+        if (error.response) {
+            // 后端返回了错误状态码，但未被 success 捕获
+            ElMessage.error(error.response.data.message || '登录失败')
+        } else {
+            ElMessage.error('登录失败，请检查网络连接')
+        }
         console.error('Login error:', error)
     } finally {
         loading.value = false
