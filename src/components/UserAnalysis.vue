@@ -369,13 +369,11 @@ const selectedLog = ref(null)
 const trendChart = ref(null)
 const behaviorChart = ref(null)
 const retentionChart = ref(null)
-const errorChart = ref(null)
 
 // 图表实例
 let trendChartInstance = null
 let behaviorChartInstance = null
 let retentionChartInstance = null
-let errorChartInstance = null
 
 // 统计数据
 const stats = ref({
@@ -513,7 +511,6 @@ const initCharts = () => {
         initTrendChart()
         initBehaviorChart()
         initRetentionChart()
-        initErrorChart()
     })
 }
 
@@ -628,36 +625,6 @@ const initRetentionChart = () => {
         ]
     }
     retentionChartInstance.setOption(option)
-}
-
-// 初始化错误统计图表
-const initErrorChart = () => {
-    if (!errorChart.value) return
-
-    errorChartInstance = echarts.init(errorChart.value)
-    const option = {
-        tooltip: {
-            trigger: 'axis'
-        },
-        xAxis: {
-            type: 'category',
-            data: ['4xx错误', '5xx错误', '超时错误', '数据库错误', '网络错误']
-        },
-        yAxis: {
-            type: 'value'
-        },
-        series: [{
-            data: [12, 5, 8, 3, 7],
-            type: 'bar',
-            itemStyle: {
-                color: function(params) {
-                    const colorList = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de']
-                    return colorList[params.dataIndex]
-                }
-            }
-        }]
-    }
-    errorChartInstance.setOption(option)
 }
 
 // 更新趋势图表
@@ -869,7 +836,6 @@ window.addEventListener('resize', () => {
     trendChartInstance?.resize()
     behaviorChartInstance?.resize()
     retentionChartInstance?.resize()
-    errorChartInstance?.resize()
 })
 </script>
 

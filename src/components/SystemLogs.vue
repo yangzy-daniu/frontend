@@ -367,7 +367,8 @@ const loadStats = async () => {
 
         const response = await getSystemLogStats(params)
         if (response.status === 200) {
-            stats.value = response.data
+            // stats.value = response.data
+            stats.value = response.data.data || response.data
         } else {
             ElMessage.error('获取统计数据失败')
         }
@@ -443,15 +444,35 @@ const exportData = async () => {
             startTime: formatDateTimeForApi(timeRangeMap.value.start),
             endTime: formatDateTimeForApi(timeRangeMap.value.end)
         }
+        // 添加responseType: 'blob'告诉axios返回Blob数据
+        const response = await exportSystemLogs(params, {
+            responseType: 'blob'
+        })
+        // const response = await exportSystemLogs(params)
 
-        const response = await exportSystemLogs(params)
+        // 获取后端返回的文件名（如果有的话）
+        const contentDisposition = response.headers['content-disposition']
+        let fileName = `系统日志_${new Date().getTime()}.xlsx`
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename\*=UTF-8''(.+)/)
+            if (match && match[1]) {
+                fileName = decodeURIComponent(match[1])
+            }
+        }
+        // 使用responseType: 'blob'后，response.data就是Blob对象
+        const blob = new Blob([response.data], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        })
+        // const blob = new Blob([response], {type: 'application/vnd.ms-excel'})
 
         // 创建下载链接
-        const blob = new Blob([response], {type: 'application/vnd.ms-excel'})
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
-        link.download = `系统日志_${new Date().toLocaleDateString()}.xlsx`
+        link.download = fileName // `系统日志_${new Date().toLocaleDateString()}.xlsx`
+
+        // 添加到文档中并点击（兼容部分浏览器）
+        document.body.appendChild(link)
         link.click()
         window.URL.revokeObjectURL(url)
 
