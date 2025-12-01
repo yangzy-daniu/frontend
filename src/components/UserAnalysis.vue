@@ -153,23 +153,36 @@
 
         <!-- 第二行图表 -->
         <el-row :gutter="20" class="chart-row">
-            <!-- 性能指标 -->
+            <!-- 活跃用户统计 -->
             <el-col :xs="24" :lg="12">
                 <el-card class="chart-card" shadow="hover">
                     <template #header>
-                        <span>系统性能指标</span>
+                        <span>活跃用户统计</span>
                     </template>
-                    <div ref="performanceChart" class="chart-container"></div>
+                    <div class="active-users">
+                        <div class="active-item">
+                            <div class="active-label">今日登录</div>
+                            <div class="active-value">{{ stats.todayLogins }} 次</div>
+                        </div>
+                        <div class="active-item">
+                            <div class="active-label">周活跃用户</div>
+                            <div class="active-value">{{ stats.weekActiveUsers }} 人</div>
+                        </div>
+                        <div class="active-item">
+                            <div class="active-label">平均会话时长</div>
+                            <div class="active-value">{{ stats.avgSessionTime }} 分钟</div>
+                        </div>
+                    </div>
                 </el-card>
             </el-col>
 
-            <!-- 错误统计 -->
+            <!-- 用户留存率 -->
             <el-col :xs="24" :lg="12">
                 <el-card class="chart-card" shadow="hover">
                     <template #header>
-                        <span>错误统计</span>
+                        <span>用户留存率</span>
                     </template>
-                    <div ref="errorChart" class="chart-container"></div>
+                    <div ref="retentionChart" class="chart-container"></div>
                 </el-card>
             </el-col>
         </el-row>
@@ -355,13 +368,13 @@ const selectedLog = ref(null)
 // 图表引用
 const trendChart = ref(null)
 const behaviorChart = ref(null)
-const performanceChart = ref(null)
+const retentionChart = ref(null)
 const errorChart = ref(null)
 
 // 图表实例
 let trendChartInstance = null
 let behaviorChartInstance = null
-let performanceChartInstance = null
+let retentionChartInstance = null
 let errorChartInstance = null
 
 // 统计数据
@@ -373,7 +386,10 @@ const stats = ref({
     userGrowth: 12.5,
     activeGrowth: 8.3,
     orderGrowth: 15.2,
-    growth: -2.1
+    growth: -2.1,
+    todayLogins: 156,
+    weekActiveUsers: 892,
+    avgSessionTime: 12.5
 })
 
 // 分页数据
@@ -496,7 +512,7 @@ const initCharts = () => {
     nextTick(() => {
         initTrendChart()
         initBehaviorChart()
-        initPerformanceChart()
+        initRetentionChart()
         initErrorChart()
     })
 }
@@ -560,34 +576,58 @@ const initBehaviorChart = () => {
     behaviorChartInstance.setOption(option)
 }
 
-// 初始化性能图表
-const initPerformanceChart = () => {
-    if (!performanceChart.value) return
+// 初始化用户留存率图表
+const initRetentionChart = () => {
+    if (!retentionChart.value) return
 
-    performanceChartInstance = echarts.init(performanceChart.value)
+    retentionChartInstance = echarts.init(retentionChart.value)
     const option = {
         tooltip: {
             trigger: 'axis'
         },
-        radar: {
-            indicator: [
-                { name: '响应时间', max: 100 },
-                { name: '吞吐量', max: 1000 },
-                { name: '成功率', max: 100 },
-                { name: 'CPU使用率', max: 100 },
-                { name: '内存使用率', max: 100 }
-            ]
+        legend: {
+            data: ['次日留存', '7日留存', '30日留存']
         },
-        series: [{
-            type: 'radar',
-            data: [{
-                value: [85, 900, 98, 65, 70],
-                name: '当前性能',
-                areaStyle: {}
-            }]
-        }]
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'category',
+            data: ['1月', '2月', '3月', '4月', '5月', '6月']
+        },
+        yAxis: {
+            type: 'value',
+            name: '留存率(%)',
+            max: 100
+        },
+        series: [
+            {
+                name: '次日留存',
+                type: 'line',
+                smooth: true,
+                data: [45, 52, 48, 55, 58, 62],
+                itemStyle: { color: '#5470c6' }
+            },
+            {
+                name: '7日留存',
+                type: 'line',
+                smooth: true,
+                data: [35, 42, 38, 45, 48, 52],
+                itemStyle: { color: '#91cc75' }
+            },
+            {
+                name: '30日留存',
+                type: 'line',
+                smooth: true,
+                data: [25, 32, 28, 35, 38, 42],
+                itemStyle: { color: '#fac858' }
+            }
+        ]
     }
-    performanceChartInstance.setOption(option)
+    retentionChartInstance.setOption(option)
 }
 
 // 初始化错误统计图表
@@ -828,7 +868,7 @@ const handleCurrentChange = (page) => {
 window.addEventListener('resize', () => {
     trendChartInstance?.resize()
     behaviorChartInstance?.resize()
-    performanceChartInstance?.resize()
+    retentionChartInstance?.resize()
     errorChartInstance?.resize()
 })
 </script>
@@ -1043,7 +1083,32 @@ window.addEventListener('resize', () => {
     display: flex;
     align-items: center;
 }
+.active-users {
+    padding: 0;
+}
 
+.active-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.active-item:last-child {
+    border-bottom: none;
+}
+
+.active-label {
+    color: #606266;
+    font-size: 14px;
+}
+
+.active-value {
+    color: #303133;
+    font-weight: 600;
+    font-size: 16px;
+}
 /* 响应式调整 */
 @media (max-width: 768px) {
     .analysis-page {
@@ -1075,7 +1140,17 @@ window.addEventListener('resize', () => {
         gap: 12px;
         align-items: flex-start;
     }
+    .active-item {
+        padding: 12px 0;
+    }
 
+    .active-label {
+        font-size: 13px;
+    }
+
+    .active-value {
+        font-size: 14px;
+    }
     /* 移动端表格调整 */
     .user-cell {
         min-width: 120px;

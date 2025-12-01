@@ -83,16 +83,22 @@ const routes = [
                 meta: { title: '系统设置', icon: 'Tools' }
             },
             {
+                path: '/monitor',
+                name: 'monitor',
+                component: () => import('../components/SystemMonitor.vue'),
+                meta: { title: '系统监控', icon: 'DataBoard' }
+            },
+            {
                 path: '/auditLogs',
                 name: 'auditLogs',
                 component: () => import('../components/OperationLog.vue'),
                 meta: { title: '操作日志', icon: 'Operation', requiresAuth: true }
             },
             {
-                path: '/sysLogs',
+                path: '/systemLogs',
                 name: 'sysLogs',
                 component: () => import('../components/SystemLogs.vue'),
-                meta: { title: '系统日志', icon: 'DataBoard' }
+                meta: { title: '系统日志', icon: 'Document' }
             }
         ]
     }

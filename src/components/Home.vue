@@ -367,7 +367,7 @@ const goToMenuManagement = () => {
 }
 
 const goToDashboard = () => {
-    router.push('/sysA')
+    router.push('/monitor')
 }
 
 onMounted(async () => {
