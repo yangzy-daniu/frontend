@@ -41,27 +41,27 @@
             </el-form>
 
             <!-- 订单表格 -->
-            <el-table :data="orderList" v-loading="loading" stripe style="width: 100%" table-layout="auto" :header-cell-style="{ 'text-align': 'center' }" >
-                <el-table-column prop="orderNo" label="订单号" width="180" />
-                <el-table-column prop="customer" label="客户" width="120" />
-                <el-table-column prop="amount" label="金额" width="100" align="right">
+            <el-table :data="orderList" v-loading="loading" stripe table-layout="fixed" style="width: 100%" :header-cell-style="{ 'text-align': 'center' }" >
+                <el-table-column prop="orderNo" label="订单号" min-width="180" />
+                <el-table-column prop="customer" label="客户" min-width="120" />
+                <el-table-column prop="amount" label="金额" min-width="100" align="right">
                     <template #default="{ row }">
                         ¥{{ row.amount.toFixed(2) }}
                     </template>
                 </el-table-column>
-                <el-table-column prop="status" label="状态" width="100">
+                <el-table-column prop="status" label="状态" min-width="100">
                     <template #default="{ row }">
                         <el-tag :type="getStatusType(row.status)">
                             {{ getStatusText(row.status) }}
                         </el-tag>
                     </template>
                 </el-table-column>
-                <el-table-column prop="createTime" label="创建时间" width="180">
+                <el-table-column prop="createTime" label="创建时间" min-width="180">
                     <template #default="{ row }">
                         {{ formatDateTime(row.createTime) }}
                     </template>
                 </el-table-column>
-                <el-table-column prop="productCount" label="商品数量" width="100" align="center" />
+                <el-table-column prop="productCount" label="商品数量" min-width="100" align="center" />
                 <el-table-column label="操作" width="180" fixed="right">
                     <template #default="{ row }">
                         <div style="display:flex;gap:4px;">

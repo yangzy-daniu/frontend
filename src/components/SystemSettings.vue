@@ -408,6 +408,16 @@
                 <p>本软件按MIT许可证条款分发。</p>
             </div>
         </el-dialog>
+
+        <!-- 系统更新检查对话框 -->
+        <el-dialog
+                v-model="showUpdateCheck"
+                title="系统更新检查"
+                width="800px"
+                destroy-on-close
+        >
+            <SystemUpdateCheck />
+        </el-dialog>
     </div>
 </template>
 
@@ -428,6 +438,7 @@ import {
     Document,
     Refresh
 } from '@element-plus/icons-vue'
+import SystemUpdateCheck from '@/components/SystemUpdateCheck.vue'
 
 const activeTab = ref('basic')
 
@@ -697,11 +708,10 @@ const deleteBackup = async (backup) => {
         // 用户取消删除
     }
 }
-
+const showUpdateCheck = ref(false)
 const checkUpdate = async () => {
-    ElMessage.info('正在检查更新...')
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    ElMessage.success('当前已是最新版本')
+    // 显示 SystemUpdateCheck 组件
+    showUpdateCheck.value = true
 }
 
 onMounted(() => {

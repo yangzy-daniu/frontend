@@ -2,5 +2,16 @@ import request from './request'
 
 // 系统信息API
 export const getSystemInfo = () => request.get('/system/info')
-export const getOnlineUserCount = () => request.get('/system/online-users/count')
-export const updateSystemInfo = (params) => request.put('/system/info', null, { params })
+
+// 系统更新API
+export const checkSystemUpdates = (version) =>
+        request.get('/system/updates/check', { params: { version } })
+
+export const getUpdateHistory = () =>
+        request.get('/system/updates/history')
+
+export const applySystemUpdate = (id) =>
+        request.put(`/system/updates/${id}/apply`)
+
+export const getCurrentVersion = () =>
+        request.get('/system/updates/current-version')

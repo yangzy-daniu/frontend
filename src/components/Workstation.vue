@@ -110,19 +110,72 @@
             <div class="notification-list">
                 <div v-for="notice in notifications" :key="notice.id" class="notification-item">
                     <div class="notice-icon" :class="notice.type">
-                        <el-icon><component :is="notice.icon" /></el-icon>
+                        <el-icon><component :is="getIconComponent(notice.icon)" /></el-icon>
                     </div>
-                    <div class="notice-content">
-                        <div class="notice-title">{{ notice.title }}</div>
+                    <div class="notice-content" @click="viewNotification(notice)">
+                        <div class="notice-title">
+                            {{ notice.title }}
+                            <el-tag v-if="!notice.read" size="small" type="danger" style="margin-left: 8px;">未读</el-tag>
+                        </div>
                         <div class="notice-desc">{{ notice.description }}</div>
-                        <div class="notice-time">{{ notice.time }}</div>
+                        <div class="notice-time">{{ formatTimeAgo(notice.createTime) }}</div>
                     </div>
-                    <el-button v-if="!notice.read" type="primary" link @click="markAsRead(notice)">
+                    <el-button v-if="!notice.read" type="primary" link @click="markAsRead(notice.id)">
                         标记已读
                     </el-button>
+                    <el-button v-if="notice.read" type="text" disabled style="color: #909399;">
+                        已读
+                    </el-button>
+                </div>
+
+                <div v-if="notifications.length === 0" class="empty-notification">
+                    <el-empty description="暂无系统通知" :image-size="80" />
                 </div>
             </div>
         </el-card>
+
+        <!-- 新增系统通知对话框 -->
+        <el-dialog
+                v-model="notificationDialogVisible"
+                :title="currentNotification.title"
+                width="600px"
+                @closed="notificationDialogVisible = false"
+        >
+            <div class="notification-detail">
+                <div class="detail-header">
+                    <div class="detail-type">
+                        <el-tag :type="currentNotification.type || 'info'">
+                            {{ getNotificationTypeText(currentNotification.type) }}
+                        </el-tag>
+                        <span class="detail-time">{{ formatTimeAgo(currentNotification.createTime) }}</span>
+                    </div>
+                    <div v-if="!currentNotification.read" class="detail-status">
+                        <el-tag type="danger">未读</el-tag>
+                    </div>
+                </div>
+
+                <div class="detail-content">
+                    <h4>通知内容：</h4>
+                    <div class="content-text">{{ currentNotification.content }}</div>
+                </div>
+
+                <div v-if="currentNotification.extraData" class="detail-extra">
+                    <h4>附加信息：</h4>
+                    <pre class="extra-json">{{ JSON.stringify(currentNotification.extraData, null, 2) }}</pre>
+                </div>
+            </div>
+
+            <template #footer>
+        <span class="dialog-footer">
+            <el-button v-if="!currentNotification.read" type="primary" @click="markAsRead(currentNotification.id)">
+                标记已读并关闭
+            </el-button>
+            <el-button @click="notificationDialogVisible = false">
+                {{ currentNotification.read ? '关闭' : '稍后处理' }}
+            </el-button>
+        </span>
+            </template>
+        </el-dialog>
         <!-- 新增待办对话框 -->
         <el-dialog
                 v-model="addDialogVisible"
@@ -277,16 +330,25 @@ import {
     Setting,
     ShoppingCart,
     TrendCharts,
-    Bell,
-    Clock,
-    Star,
     Document,
-    Check,
     Warning,
-    Plus
+    Plus,
+    Bell,
+    Message,
+    Check,
+    CircleCheck,
+    InfoFilled,
+    Clock
 } from '@element-plus/icons-vue'
 import { getTodayTodos, deleteTodoById, updateTodoStatus, createTodo } from '@/api/todo'
 import { getRecentAccess } from '@/api/recent'
+import {
+    getNotifications,
+    getDashboardNotifications,
+    markNotificationAsRead,
+    getUnreadCount,
+    getNotificationDetail
+} from '@/api/notification'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -645,65 +707,237 @@ const getDefaultRecentAccess = () => {
     ]
 }
 
-// 最近访问
-// const recentAccess = ref([
+const notificationDialogVisible = ref(false)
+const currentNotification = ref({})
+const loadingNotifications = ref(false)
+const notificationPage = reactive({
+    pageNum: 1,
+    pageSize: 10,
+    total: 0
+})
+
+// 加载通知数据
+const loadNotifications = async () => {
+    loadingNotifications.value = true
+    try {
+        const params = {
+            pageNum: notificationPage.pageNum,
+            pageSize: 5, // 工作台只显示5条
+            status: 'ALL'
+        }
+        const response = await getDashboardNotifications(params)
+        if (response.data && response.data.code === 200) {
+            const data = response.data.data
+            notifications.value = data.map(item => ({
+                id: item.id,
+                title: item.title,
+                description: item.description || item.content,
+                content: item.content,
+                type: item.type?.toLowerCase() || 'info',
+                icon: item.icon || 'Bell',
+                read: item.status === 'READ',
+                createTime: item.createTime,
+                extraData: item.extraData
+            }))
+        }
+    } catch (error) {
+        console.error('加载通知失败:', error)
+        ElMessage.error('加载通知失败')
+        // 使用模拟数据
+        notifications.value = getMockNotifications()
+    } finally {
+        loadingNotifications.value = false
+    }
+}
+
+// 加载未读数量
+const loadUnreadCount = async () => {
+    try {
+        const response = await getUnreadCount()
+        if (response.data && response.data.code === 200) {
+            notificationPage.total = response.data.data
+        }
+    } catch (error) {
+        console.error('加载未读数量失败:', error)
+    }
+}
+
+// 获取图标组件
+const getIconComponent = (iconName) => {
+    const iconMap = {
+        'bell': Bell,
+        'message': Message,
+        'warning': Warning,
+        'check': Check,
+        'success': CircleCheck,
+        'info': InfoFilled,
+        'clock': Clock,
+        'user': User,
+        'shopping': ShoppingCart
+    }
+    return iconMap[iconName?.toLowerCase()] || Bell
+}
+
+// 格式化时间（多久前）
+const formatTimeAgo = (time) => {
+    if (!time) return '未知时间'
+
+    const now = new Date()
+    const date = new Date(time)
+    const diffMs = now - date
+    const diffMins = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+    if (diffMins < 1) return '刚刚'
+    if (diffMins < 60) return `${diffMins}分钟前`
+    if (diffHours < 24) return `${diffHours}小时前`
+    if (diffDays < 7) return `${diffDays}天前`
+
+    // 超过7天显示具体日期
+    return date.toLocaleDateString('zh-CN', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    })
+}
+
+// 查看通知详情
+const viewNotification = async (notice) => {
+    try {
+        const response = await getNotificationDetail(notice.id)
+        if (response.data && response.data.code === 200) {
+            currentNotification.value = response.data.data
+            notificationDialogVisible.value = true
+        }
+    } catch (error) {
+        console.error('获取通知详情失败:', error)
+        currentNotification.value = notice
+        notificationDialogVisible.value = true
+    }
+}
+
+// 标记为已读
+const markAsRead = async (noticeId) => {
+    try {
+        await markNotificationAsRead(noticeId)
+
+        // 更新本地状态
+        const notice = notifications.value.find(n => n.id === noticeId)
+        if (notice) {
+            notice.read = true
+        }
+
+        if (currentNotification.value.id === noticeId) {
+            currentNotification.value.read = true
+        }
+
+        // 更新未读数量
+        await loadUnreadCount()
+
+        ElMessage.success('标记为已读')
+    } catch (error) {
+        console.error('标记已读失败:', error)
+        ElMessage.error('标记失败')
+    }
+}
+
+// 查看全部通知
+const viewAllNotifications = () => {
+    router.push('/notification/list')
+}
+
+// 获取通知类型文本
+const getNotificationTypeText = (type) => {
+    const typeMap = {
+        'info': '信息',
+        'warning': '警告',
+        'error': '错误',
+        'success': '成功',
+        'system': '系统',
+        'user': '用户',
+        'order': '订单'
+    }
+    return typeMap[type] || '通知'
+}
+
+// 模拟通知数据（备用）
+const getMockNotifications = () => {
+    return [
+        {
+            id: 1,
+            title: '新用户注册',
+            description: '用户"张三"完成了注册，请及时审核',
+            content: '用户"张三"（手机号：13800138000）已完成注册，需要管理员审核后才能使用系统功能。',
+            type: 'info',
+            icon: 'user',
+            read: false,
+            createTime: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
+            extraData: { userId: 123, username: '张三', phone: '13800138000' }
+        },
+        {
+            id: 2,
+            title: '订单待处理',
+            description: '有3个新订单等待处理',
+            content: '当前有3个新订单需要处理，请及时查看和处理。',
+            type: 'warning',
+            icon: 'shopping',
+            read: false,
+            createTime: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+            extraData: { orderCount: 3, orderIds: [1001, 1002, 1003] }
+        },
+        {
+            id: 3,
+            title: '系统更新完成',
+            description: '系统已更新至最新版本 v1.2.0',
+            content: '系统已成功更新至 v1.2.0 版本，新增了待办事项提醒功能。',
+            type: 'success',
+            icon: 'check',
+            read: true,
+            createTime: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+            extraData: { version: '1.2.0', updateTime: new Date().toISOString() }
+        }
+    ]
+}
+
+// unreadCount 计算属性
+const unreadCount = computed(() => {
+    return notificationPage.total > 99 ? '99+' : notificationPage.total
+})
+
+// 系统通知
+const notifications = ref([])
 //     {
 //         id: 1,
-//         title: '用户管理',
-//         path: '/user',
+//         title: '新用户注册',
+//         description: '用户 "张三" 完成了注册，请及时审核',
+//         type: 'info',
 //         icon: User,
-//         time: '10分钟前'
+//         time: '5分钟前',
+//         read: false
 //     },
 //     {
 //         id: 2,
-//         title: '订单管理',
-//         path: '/order',
+//         title: '订单待处理',
+//         description: '有3个新订单等待处理',
+//         type: 'warning',
 //         icon: ShoppingCart,
-//         time: '30分钟前'
+//         time: '10分钟前',
+//         read: false
 //     },
 //     {
 //         id: 3,
-//         title: '系统分析',
-//         path: '/analysis',
-//         icon: TrendCharts,
-//         time: '1小时前'
+//         title: '系统更新',
+//         description: '系统已更新至最新版本 v1.2.0',
+//         type: 'success',
+//         icon: Check,
+//         time: '1小时前',
+//         read: true
 //     }
 // ])
 
-// 系统通知
-const notifications = ref([
-    {
-        id: 1,
-        title: '新用户注册',
-        description: '用户 "张三" 完成了注册，请及时审核',
-        type: 'info',
-        icon: User,
-        time: '5分钟前',
-        read: false
-    },
-    {
-        id: 2,
-        title: '订单待处理',
-        description: '有3个新订单等待处理',
-        type: 'warning',
-        icon: ShoppingCart,
-        time: '10分钟前',
-        read: false
-    },
-    {
-        id: 3,
-        title: '系统更新',
-        description: '系统已更新至最新版本 v1.2.0',
-        type: 'success',
-        icon: Check,
-        time: '1小时前',
-        read: true
-    }
-])
 
-const unreadCount = computed(() => {
-    return notifications.value.filter(notice => !notice.read).length
-})
 
 const handleAction = (action) => {
     router.push(action.path)
@@ -733,33 +967,42 @@ const gotoPage = (item) => {
     router.push(item.path)
 }
 
-const viewAllNotifications = () => {
-    ElMessage.info('查看全部通知功能开发中...')
-}
 
-const markAsRead = (notice) => {
-    notice.read = true
-    ElMessage.success('标记为已读')
-}
+// const markAsRead = (notice) => {
+//     notice.read = true
+//     ElMessage.success('标记为已读')
+// }
 
 onMounted(async () => {
     // loadTodos()
     await Promise.all([
         loadTodos(),
-        loadRecentAccess()
+        loadRecentAccess(),
+        loadNotifications(),
+        loadUnreadCount()
     ])
 
     // 设置定时刷新最近访问记录（每分钟刷新一次）
     refreshTimer = setInterval(() => {
         loadRecentAccess()
     }, 60000)
+
+    // 设置定时刷新通知（每5分钟刷新一次）
+    notificationTimer = setInterval(() => {
+        loadNotifications()
+        loadUnreadCount()
+    }, 300000)
 })
 
 // 清理定时器
 let refreshTimer = null
+let notificationTimer = null
 onUnmounted(() => {
     if (refreshTimer) {
         clearInterval(refreshTimer)
+    }
+    if (notificationTimer) {
+        clearInterval(notificationTimer)
     }
 })
 </script>
@@ -992,5 +1235,97 @@ onUnmounted(() => {
     border-radius: 4px;
     margin: 0 -16px;
     padding: 12px 16px;
+}
+
+/* 在样式部分添加以下代码 */
+.notification-item {
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.notification-item:hover {
+    background-color: #fafafa;
+    border-radius: 4px;
+    margin: 0 -16px;
+    padding: 12px 16px;
+}
+
+.notice-content {
+    flex: 1;
+    cursor: pointer;
+}
+
+.empty-notification {
+    padding: 40px 0;
+    text-align: center;
+}
+
+/* 通知详情样式 */
+.notification-detail {
+    padding: 0 10px;
+}
+
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-type {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.detail-time {
+    color: #909399;
+    font-size: 14px;
+}
+
+.detail-status {
+    margin-left: 10px;
+}
+
+.detail-content {
+    margin-bottom: 20px;
+}
+
+.detail-content h4 {
+    margin: 0 0 10px 0;
+    color: #303133;
+    font-size: 16px;
+}
+
+.content-text {
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    line-height: 1.6;
+    color: #606266;
+}
+
+.detail-extra {
+    margin-top: 20px;
+}
+
+.detail-extra h4 {
+    margin: 0 0 10px 0;
+    color: #303133;
+    font-size: 16px;
+}
+
+.extra-json {
+    padding: 12px;
+    background-color: #f5f7fa;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 0;
 }
 </style>
