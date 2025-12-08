@@ -52,15 +52,28 @@
             <el-col :xs="24" :lg="12">
                 <el-card>
                     <template #header>
-                        <span>最近订单</span>
+                        <div class="card-header">
+                            <span>最近订单</span>
+                            <el-button
+                                    type="primary"
+                                    size="small"
+                                    link
+                                    @click="router.push('/order')"
+                            >
+                                查看更多
+                            </el-button>
+                        </div>
                     </template>
-                    <div class="recent-orders">
+                    <div v-loading="orderLoading" class="recent-orders">
+                        <div v-if="recentOrders.length === 0 && !orderLoading" class="empty-data">
+                            暂无订单数据
+                        </div>
                         <div v-for="order in recentOrders" :key="order.id" class="order-item">
                             <div class="order-info">
                                 <div class="order-no">{{ order.orderNo }}</div>
                                 <div class="order-customer">{{ order.customer }}</div>
                             </div>
-                            <div class="order-amount">¥{{ order.amount.toFixed(2) }}</div>
+                            <div class="order-amount">¥{{ order.amount?.toFixed(2) }}</div>
                             <el-tag size="small" :type="getStatusType(order.status)">
                                 {{ getStatusText(order.status) }}
                             </el-tag>
@@ -69,16 +82,26 @@
                 </el-card>
             </el-col>
 
+            <!-- 替换系统日志部分 -->
             <el-col :xs="24" :lg="12">
                 <el-card>
                     <template #header>
-                        <span>系统日志</span>
+                        <span>热门产品</span>
                     </template>
-                    <div class="system-logs">
-                        <div v-for="log in systemLogs" :key="log.id" class="log-item">
-                            <div class="log-time">{{ log.time }}</div>
-                            <div class="log-content">{{ log.content }}</div>
-                            <el-tag size="small" :type="log.type">{{ log.level }}</el-tag>
+                    <div class="popular-products">
+                        <div v-for="product in popularProducts" :key="product.id" class="product-item">
+                            <div class="product-rank" :class="`rank-${product.rank}`">
+                                {{ product.rank }}
+                            </div>
+                            <div class="product-info">
+                                <div class="product-name">{{ product.name }}</div>
+                                <div class="product-sales">销量: {{ product.sales }}</div>
+                            </div>
+                            <div class="product-growth">
+                                <el-tag size="small" :type="product.growth >= 0 ? 'success' : 'danger'">
+                                    {{ product.growth >= 0 ? '+' : '' }}{{ product.growth }}%
+                                </el-tag>
+                            </div>
                         </div>
                     </div>
                 </el-card>
@@ -99,6 +122,14 @@ import {
     Bottom,
     Money
 } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { listOrderByPage } from '@/api/order'
+import { getPopularProducts } from '@/api/product'
+
+const router = useRouter()
+// 添加订单加载状态
+const orderLoading = ref(false)
 
 // 模拟数据
 const statsData = ref([
@@ -139,18 +170,41 @@ const statsData = ref([
         icon: Money
     }
 ])
+const recentOrders = ref([])
+// 获取最近订单的函数
+const fetchRecentOrders = async () => {
+    orderLoading.value = true
+    try {
+        const response = await listOrderByPage({
+            params: {
+                page: 1,
+                size: 5,
+            }
+        })
+        // 检查HTTP状态码
+        if (response.status !== 200) {
+            throw new Error(`HTTP ${response.status}: 获取订单列表失败`)
+        }
 
-const recentOrders = ref([
-    { id: 1, orderNo: 'ORD202401010001', customer: '张三', amount: 2999, status: 'paid' },
-    { id: 2, orderNo: 'ORD202401010002', customer: '李四', amount: 1599, status: 'pending' },
-    { id: 3, orderNo: 'ORD202401010003', customer: '王五', amount: 899, status: 'completed' }
-])
-
-const systemLogs = ref([
-    { id: 1, time: '10:30', content: '用户 admin 登录系统', level: 'INFO', type: 'success' },
-    { id: 2, time: '10:25', content: '新增用户: testuser', level: 'INFO', type: 'success' },
-    { id: 3, time: '10:20', content: '订单支付失败', level: 'WARN', type: 'warning' }
-])
+        if (response.data && response.data.content) {
+            // 将获取的数据赋值给 recentOrders
+            recentOrders.value = response.data.content.map(order => ({
+                id: order.id,
+                orderNo: order.orderNo,
+                customer: order.customer,
+                amount: order.amount,
+                status: order.status
+            }))
+        }
+    } catch (error) {
+        console.error('获取最近订单失败:', error)
+        ElMessage.error('获取最近订单失败')
+        // 失败时保持空数组
+        recentOrders.value = []
+    } finally {
+        orderLoading.value = false
+    }
+}
 
 const salesChart = ref(null)
 const userChart = ref(null)
@@ -225,12 +279,55 @@ const getStatusText = (status) => {
     return textMap[status] || '未知'
 }
 
+// const popularProducts = ref([
+//     { id: 1, name: '智能手机 Pro', rank: 1, sales: '2,345', growth: 12.5 },
+//     { id: 2, name: '无线耳机', rank: 2, sales: '1,890', growth: 8.2 },
+//     { id: 3, name: '智能手表', rank: 3, sales: '1,567', growth: -3.1 },
+//     { id: 4, name: '笔记本电脑', rank: 4, sales: '1,234', growth: 5.6 },
+//     { id: 5, name: '平板电脑', rank: 5, sales: '987', growth: 15.3 }
+// ])
+const popularProducts = ref([])
+
+// 添加获取热门产品的函数
+const fetchPopularProducts = async () => {
+    try {
+        const response = await getPopularProducts()
+        // 检查HTTP状态码
+        if (response.status !== 200) {
+            throw new Error(`HTTP ${response.status}: 获取热门产品失败`)
+        }
+
+        if (response.data) {
+            popularProducts.value = response.data.map((product, index) => ({
+                id: product.id,
+                name: product.name,
+                rank: index + 1,
+                sales: product.monthlySales?.toLocaleString() || '0',
+                growth: product.growthRate ? parseFloat(product.growthRate) : 0
+            }))
+        }
+    } catch (error) {
+        console.error('获取热门产品失败:', error)
+        // 失败时使用模拟数据
+        popularProducts.value = [
+            { id: 1, name: '智能手机 Pro', rank: 1, sales: '2,345', growth: 12.5 },
+            { id: 2, name: '无线耳机', rank: 2, sales: '1,890', growth: 8.2 },
+            { id: 3, name: '智能手表', rank: 3, sales: '1,567', growth: -3.1 },
+            { id: 4, name: '笔记本电脑', rank: 4, sales: '1,234', growth: 5.6 },
+            { id: 5, name: '平板电脑', rank: 5, sales: '987', growth: 15.3 }
+        ]
+    }
+}
+
 onMounted(() => {
     // 确保DOM渲染完成后再初始化图表
     setTimeout(() => {
         initCharts()
     }, 100)
-
+    // 获取最近订单
+    fetchRecentOrders()
+    // 热门产品
+    fetchPopularProducts()
     // 响应窗口大小变化
     window.addEventListener('resize', () => {
         salesChartInstance?.resize()
@@ -377,5 +474,99 @@ onUnmounted(() => {
     flex: 1;
     margin: 0 12px;
     color: #606266;
+}
+
+/* 添加 card-header 样式 */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* 添加空数据提示样式 */
+.empty-data {
+    text-align: center;
+    padding: 40px 0;
+    color: #909399;
+    font-size: 14px;
+}
+
+/* 确保 order-item 的样式保持不变 */
+.order-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.order-item:last-child {
+    border-bottom: none;
+}
+
+.popular-products {
+    padding: 0;
+}
+
+.product-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.product-item:last-child {
+    border-bottom: none;
+}
+
+.product-rank {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 12px;
+    margin-right: 12px;
+}
+
+.rank-1 {
+    background-color: #FFD700;
+    color: #fff;
+}
+
+.rank-2 {
+    background-color: #C0C0C0;
+    color: #fff;
+}
+
+.rank-3 {
+    background-color: #CD7F32;
+    color: #fff;
+}
+
+.rank-4, .rank-5 {
+    background-color: #f5f5f5;
+    color: #909399;
+}
+
+.product-info {
+    flex: 1;
+}
+
+.product-name {
+    font-weight: 500;
+    color: #303133;
+    margin-bottom: 4px;
+}
+
+.product-sales {
+    color: #909399;
+    font-size: 12px;
+}
+
+.product-growth {
+    margin-left: 12px;
 }
 </style>
