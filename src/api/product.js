@@ -6,3 +6,11 @@ export function getPopularProducts() {
         method: 'get'
     })
 }
+
+export function getCategorySales(type = 'sales') {
+    return request({
+        url: '/products/category-sales',
+        method: 'get',
+        params: { type }
+    })
+}

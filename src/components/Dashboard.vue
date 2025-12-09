@@ -2,7 +2,7 @@
     <div class="dashboard">
         <div class="page-header">
             <h1>数据概览</h1>
-            <p>实时监控系统关键指标</p>
+            <p>多维度数据分析，驱动业务增长</p>
         </div>
 
         <!-- 统计卡片 -->
@@ -29,7 +29,7 @@
 
         <!-- 图表区域 -->
         <el-row :gutter="20" class="chart-row">
-            <el-col :xs="24" :lg="16">
+            <el-col :xs="24" :lg="14">
                 <el-card class="chart-card">
                     <template #header>
                         <span>销售趋势</span>
@@ -37,12 +37,23 @@
                     <div ref="salesChart" class="chart-container"></div>
                 </el-card>
             </el-col>
-            <el-col :xs="24" :lg="8">
+            <el-col :xs="24" :lg="10">
                 <el-card class="chart-card">
                     <template #header>
-                        <span>用户分布</span>
+                        <div class="chart-header">
+                            <span>产品销售占比</span>
+                            <el-select
+                                    v-model="categoryType"
+                                    size="small"
+                                    style="width: 120px"
+                                    @change="fetchCategorySales"
+                            >
+                                <el-option label="按销量" value="sales" />
+                                <el-option label="按金额" value="revenue" />
+                            </el-select>
+                        </div>
                     </template>
-                    <div ref="userChart" class="chart-container"></div>
+                    <div ref="categoryChart" class="chart-container"></div>
                 </el-card>
             </el-col>
         </el-row>
@@ -125,7 +136,7 @@ import {
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { listOrderByPage } from '@/api/order'
-import { getPopularProducts } from '@/api/product'
+import { getPopularProducts, getCategorySales } from '@/api/product'
 
 const router = useRouter()
 // 添加订单加载状态
@@ -207,10 +218,8 @@ const fetchRecentOrders = async () => {
 }
 
 const salesChart = ref(null)
-const userChart = ref(null)
 
 let salesChartInstance = null
-let userChartInstance = null
 
 const initCharts = () => {
     // 销售趋势图
@@ -236,37 +245,6 @@ const initCharts = () => {
     }
     salesChartInstance.setOption(salesOption)
 
-    // 用户分布图
-    userChartInstance = echarts.init(userChart.value)
-    const userOption = {
-        tooltip: {
-            trigger: 'item',
-            formatter: '{a} <br/>{b}: {c} ({d}%)'
-        },
-        legend: {
-            orient: 'vertical',
-            right: 10,
-            top: 'center'
-        },
-        series: [{
-            name: '用户分布',
-            type: 'pie',
-            radius: ['40%', '70%'],
-            data: [
-                { value: 335, name: '普通用户' },
-                { value: 310, name: 'VIP用户' },
-                { value: 234, name: '管理员' }
-            ],
-            emphasis: {
-                itemStyle: {
-                    shadowBlur: 10,
-                    shadowOffsetX: 0,
-                    shadowColor: 'rgba(0, 0, 0, 0.5)'
-                }
-            }
-        }]
-    }
-    userChartInstance.setOption(userOption)
 }
 
 const getStatusType = (status) => {
@@ -279,13 +257,6 @@ const getStatusText = (status) => {
     return textMap[status] || '未知'
 }
 
-// const popularProducts = ref([
-//     { id: 1, name: '智能手机 Pro', rank: 1, sales: '2,345', growth: 12.5 },
-//     { id: 2, name: '无线耳机', rank: 2, sales: '1,890', growth: 8.2 },
-//     { id: 3, name: '智能手表', rank: 3, sales: '1,567', growth: -3.1 },
-//     { id: 4, name: '笔记本电脑', rank: 4, sales: '1,234', growth: 5.6 },
-//     { id: 5, name: '平板电脑', rank: 5, sales: '987', growth: 15.3 }
-// ])
 const popularProducts = ref([])
 
 // 添加获取热门产品的函数
@@ -319,6 +290,157 @@ const fetchPopularProducts = async () => {
     }
 }
 
+// 在 data 部分添加
+const categoryType = ref('sales')
+const categoryChart = ref(null)
+let categoryChartInstance = null
+
+// 添加获取品类销售数据的函数
+const fetchCategorySales = async () => {
+    try {
+        const response = await getCategorySales(categoryType.value)
+
+        if (response.status !== 200) {
+            throw new Error(`HTTP ${response.status}: 获取品类数据失败`)
+        }
+
+        if (response.data) {
+            updateCategoryChart(response.data)
+        }
+    } catch (error) {
+        console.error('获取品类销售数据失败:', error)
+        // 使用模拟数据
+        const mockData = categoryType.value === 'sales' ? [
+            { category: '电子产品', value: 1240, color: '#5470c6' },
+            { category: '家用电器', value: 890, color: '#91cc75' },
+            { category: '服装鞋帽', value: 670, color: '#fac858' },
+            { category: '图书文具', value: 450, color: '#ee6666' },
+            { category: '其他', value: 320, color: '#73c0de' }
+        ] : [
+            { category: '电子产品', value: 45600, color: '#5470c6' },
+            { category: '家用电器', value: 27800, color: '#91cc75' },
+            { category: '服装鞋帽', value: 18900, color: '#fac858' },
+            { category: '图书文具', value: 12400, color: '#ee6666' },
+            { category: '其他', value: 8900, color: '#73c0de' }
+        ]
+        updateCategoryChart(mockData)
+    }
+}
+
+// 更新品类图表
+const updateCategoryChart = (data) => {
+    if (!categoryChartInstance) {
+        categoryChartInstance = echarts.init(categoryChart.value)
+    }
+
+    // 计算总数
+    const totalValue = data.reduce((sum, item) => sum + item.value, 0);
+    const totalText = categoryType.value === 'sales'
+            ? `总销量\n${totalValue.toLocaleString()}件`
+            : `总金额\n¥${totalValue.toLocaleString()}`;
+
+    const option = {
+        tooltip: {
+            trigger: 'item',
+            formatter: (params) => {
+                const value = categoryType.value === 'sales'
+                        ? `${params.value}件`
+                        : `¥${params.value.toLocaleString()}`
+                return `${params.name}<br/>${value} (${params.percent}%)`
+            }
+        },
+        legend: {
+            // 图例靠右垂直排列
+            orient: 'vertical',
+            right: 15,      // 距离右侧15像素
+            top: 'middle',   // 垂直居中
+            align: 'left',   // 文本左对齐
+            textStyle: {
+                fontSize: 12,
+                color: '#606266'
+            },
+            itemGap: 8,     // 图例项之间的间距
+            itemWidth: 12,   // 图例标记宽度
+            itemHeight: 12,  // 图例标记高度
+            // 移除百分比，只显示品类名称
+            formatter: function (name) {
+                return name;  // 只返回品类名称，不显示百分比
+            }
+        },
+        series: [{
+            name: '销售占比',
+            type: 'pie',
+            // 调整饼图位置，向左移动，给右侧图例留空间
+            radius: ['40%', '70%'],
+            center: ['35%', '50%'],  // 向左移动饼图
+            avoidLabelOverlap: false,
+            itemStyle: {
+                borderRadius: 6,
+                borderColor: '#fff',
+                borderWidth: 2
+            },
+            label: {
+                show: false,
+                position: 'center'
+            },
+            emphasis: {
+                label: {
+                    show: true,
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    formatter: (params) => {
+                        return `${params.name}\n${params.percent}%`
+                    }
+                },
+                scale: true,
+                scaleSize: 5
+            },
+            labelLine: {
+                show: false
+            },
+            data: data.map(item => ({
+                name: item.category,
+                value: item.value,
+                // 使用后端返回的颜色
+                itemStyle: {
+                    color: item.color || '#999999'
+                }
+            }))
+        }],
+        graphic: [
+            {
+                type: 'text',
+                left: '35%',  // 与饼图中心对齐
+                top: '50%',
+                style: {
+                    text: totalText,
+                    fontSize: 13,
+                    fontWeight: 'bold',
+                    fill: '#606266',
+                    lineHeight: 20,
+                    textAlign: 'center'
+                }
+            }
+        ]
+    }
+
+    categoryChartInstance.setOption(option)
+}
+const getCategoryColor = (category) => {
+    const colorMap = {
+        '电子产品': '#5470c6',
+        '家用电器': '#91cc75',
+        '服装鞋帽': '#fac858',
+        '图书文具': '#ee6666',
+        '数码配件': '#73c0de',
+        '运动户外': '#3ba272',
+        '美妆个护': '#fc8452',
+        '食品饮料': '#9a60b4',
+        '家居用品': '#ea7ccc',
+        '其他': '#9a60b4'
+    };
+    return colorMap[category] || '#999999';
+};
 onMounted(() => {
     // 确保DOM渲染完成后再初始化图表
     setTimeout(() => {
@@ -328,10 +450,12 @@ onMounted(() => {
     fetchRecentOrders()
     // 热门产品
     fetchPopularProducts()
+    // 初始化品类图表
+    fetchCategorySales()
     // 响应窗口大小变化
     window.addEventListener('resize', () => {
         salesChartInstance?.resize()
-        userChartInstance?.resize()
+        categoryChartInstance?.resize()
     })
 })
 
@@ -339,7 +463,7 @@ onMounted(() => {
 import { onUnmounted } from 'vue'
 onUnmounted(() => {
     salesChartInstance?.dispose()
-    userChartInstance?.dispose()
+    categoryChartInstance?.dispose()
 })
 </script>
 
@@ -568,5 +692,46 @@ onUnmounted(() => {
 
 .product-growth {
     margin-left: 12px;
+}
+
+/* 为图例区域添加内边距 */
+:deep(.el-card__header) {
+    padding: 16px 20px;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* 调整销售趋势图的容器样式 */
+.sales-chart-container {
+    width: 100%;
+    height: 100%;
+}
+
+
+
+
+/* 确保图表容器有足够高度 */
+.chart-container {
+    height: 340px;  /* 增加一点高度 */
+    width: 100%;
+    min-height: 340px;
+}
+
+/* 调整图表卡片的内边距，为图例留更多空间 */
+.chart-card :deep(.el-card__body) {
+    padding: 15px;
+}
+
+/* 确保图表区域有足够的空间 */
+.chart-row {
+    margin-bottom: 20px;
+}
+
+.chart-card {
+    height: 100%;
 }
 </style>

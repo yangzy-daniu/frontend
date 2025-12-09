@@ -100,12 +100,6 @@ const routes = [
                 meta: { title: '数据概览', icon: 'DataAnalysis' }
             },
             {
-                path: '/sysA',
-                name: 'systemAnalysis',
-                component: () => import('../components/SystemAnalysis.vue'),
-                meta: { title: '系统分析', icon: 'Histogram', permission: 'analysis:view' }
-            },
-            {
                 path: '/userA',
                 name: 'userAnalysis',
                 component: () => import('../components/UserAnalysis.vue'),
