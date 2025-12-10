@@ -1,7 +1,7 @@
 import request from './request'
 
 // 系统信息API
-export const getSystemInfo = () => request.get('/system/info')
+export const getSystemInfo = () => request.get('/system-monitor/info')
 
 // 系统更新API
 export const checkSystemUpdates = (version) =>
