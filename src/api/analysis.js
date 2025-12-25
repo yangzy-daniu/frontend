@@ -1,5 +1,8 @@
 import request from './request'
 
+export const getRecentActions = () => request.get('/analysis/recent-actions')
+export const getQuickStats = () => request.get('/analysis/quick-stats')
+
 export function getAnalysisStats(timeRange = '7d') {
     return request({
         url: '/analysis/stats',

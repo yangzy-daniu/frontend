@@ -209,7 +209,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getDashboardStats, getSystemStats } from '@/api/stats'
+import { getRecentActions, getQuickStats } from '@/api/analysis'
 import { getSystemInfo } from '@/api/system'
 import {
     User, Key, Menu, DataAnalysis,
@@ -264,14 +264,6 @@ const loadSystemInfo = async () => {
     }
 }
 
-// // 模拟最近活动数据
-// const recentActivities = ref([
-//     { description: '修改了用户"张三"的权限', time: '10分钟前' },
-//     { description: '创建了新角色"内容编辑"', time: '2小时前' },
-//     { description: '更新了系统菜单结构', time: '昨天' },
-//     { description: '登录系统', time: loginTime.value }
-// ])
-
 const welcomeMessage = computed(() => {
     const hour = new Date().getHours()
     if (hour < 6) return '凌晨好！新的一天开始了！'
@@ -306,7 +298,7 @@ const loadUserInfo = async () => {
 
 const loadDashboardStats = async () => {
     try {
-        const response = await getDashboardStats()
+        const response = await getRecentActions()
         todayAccess.value = response.data.todayAccess || 0
         monthOperations.value = response.data.monthOperations || 0
         completionRate.value = response.data.completionRate || 0
@@ -333,7 +325,7 @@ const loadDashboardStats = async () => {
 
 const loadSystemStats = async () => {
     try {
-        const response = await getSystemStats()
+        const response = await getQuickStats()
         systemStats.value = response.data
         console.log('系统统计数据加载成功:', systemStats.value)
     } catch (error) {

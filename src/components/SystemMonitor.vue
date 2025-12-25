@@ -298,6 +298,7 @@ import {
     Top,
     Bottom
 } from '@element-plus/icons-vue'
+import {getResourceTrend, getSystemStats} from '@/api/system'
 
 const router = useRouter()
 
@@ -400,33 +401,40 @@ onMounted(() => {
 // 监听时间范围变化
 watch(timeRange, () => {
     loadData()
+    loadResourceTrendData()
+    updatePerformanceChart()
 })
 
 // 监听资源类型变化
 watch(resourceType, () => {
-    updateResourceChart()
+    loadResourceTrendData()
 })
 
 // 加载数据
 const loadData = async () => {
     tableLoading.value = true
     try {
-        // 模拟API调用获取数据
-        await new Promise(resolve => setTimeout(resolve, 500))
-
-        // 更新统计数据（模拟实时数据变化）
-        stats.value = {
-            cpuUsage: Math.min(100, Math.max(0, stats.value.cpuUsage + (Math.random() * 10 - 5))),
-            memoryUsage: Math.min(100, Math.max(0, stats.value.memoryUsage + (Math.random() * 5 - 2.5))),
-            diskUsage: Math.min(100, Math.max(0, stats.value.diskUsage + (Math.random() * 2 - 1))),
-            networkTraffic: Math.max(0, stats.value.networkTraffic + (Math.random() * 200 - 100)),
-            responseTime: Math.max(10, stats.value.responseTime + (Math.random() * 20 - 10)),
-            throughput: Math.max(0, stats.value.throughput + (Math.random() * 100 - 50)),
-            successRate: Math.min(100, Math.max(95, stats.value.successRate + (Math.random() * 0.5 - 0.25)))
+        // 1. 加载统计数据
+        const statsResponse = await getSystemStats()
+        console.log('系统信息响应:', statsResponse) // 调试日志
+        const statsData = statsResponse.data || statsResponse
+        if (statsData) {
+            stats.value = {
+                cpuUsage: statsData.cpuUsage || 0,
+                memoryUsage: statsData.memoryUsage || 0,
+                diskUsage: statsData.diskUsage || 0,
+                networkTraffic: statsData.networkTraffic || 0,
+                responseTime: statsData.responseTime || 0,
+                throughput: statsData.throughput || 0,
+                successRate: statsData.successRate || 100
+            }
+        } else {
+            console.warn('获取统计数据失败，使用模拟数据')
+            await loadMockData()
         }
 
         pagination.total = systemLogs.value.length
-        updateCharts()
+        loadCharts()
     } catch (error) {
         console.error('加载数据失败:', error)
         ElMessage.error('加载数据失败')
@@ -435,27 +443,17 @@ const loadData = async () => {
     }
 }
 
-// 初始化图表
-const initCharts = () => {
-    nextTick(() => {
-        initPerformanceChart()
-        initErrorChart()
-        initResourceChart()
-    })
-}
+// 更新性能图表（雷达图）- 修改为使用真实数据
+const updatePerformanceChart = () => {
+    if (!performanceChartInstance) return
 
-// 初始化性能图表
-const initPerformanceChart = () => {
-    if (!performanceChart.value) return
-
-    performanceChartInstance = echarts.init(performanceChart.value)
     const option = {
         tooltip: {
             trigger: 'axis'
         },
         radar: {
             indicator: [
-                { name: '客户流量', max: 1000 },
+                { name: '网络流量', max: resourceType.value === '1h' ? 1000 : resourceType.value === '6h' ? 2000 : 3000 },
                 { name: '响应时间', max: 500 },
                 { name: '内存使用率', max: 100 },
                 { name: '成功率', max: 100 },
@@ -465,10 +463,16 @@ const initPerformanceChart = () => {
         series: [{
             type: 'radar',
             data: [{
-                value: [850, 120, 68, 99.2, 45],
+                value: [
+                    stats.value.networkTraffic,
+                    stats.value.responseTime,
+                    stats.value.memoryUsage,
+                    stats.value.successRate,
+                    stats.value.cpuUsage
+                ],
                 name: '当前性能',
                 areaStyle: {
-                    // color: 'rgba(84, 112, 198, 0.5)'
+                    opacity: 0.3
                 },
                 lineStyle: {
                     color: '#5470c6'
@@ -479,45 +483,97 @@ const initPerformanceChart = () => {
             }]
         }]
     }
-    performanceChartInstance.setOption(option)
+
+    performanceChartInstance.setOption(option, true)
 }
 
-// 初始化错误统计图表
-const initErrorChart = () => {
-    if (!errorChart.value) return
+// 加载资源趋势数据
+const loadResourceTrendData = async () => {
+    try {
+        const trendData = await getResourceTrend(resourceType.value, timeRange.value)
 
-    errorChartInstance = echarts.init(errorChart.value)
+        if (trendData) {
+            updateResourceChartWithRealData(trendData)
+        } else {
+            // 使用模拟数据
+            console.warn('获取趋势数据失败，使用模拟数据')
+            updateResourceChart()
+        }
+    } catch (error) {
+        console.error('加载趋势数据失败:', error)
+        updateResourceChart()
+    }
+}
+
+// 使用真实数据更新资源图表
+const updateResourceChartWithRealData = (trendData) => {
+    if (!resourceChartInstance || !trendData) return
+
+    let title, color
+    switch(resourceType.value) {
+        case 'cpu':
+            title = 'CPU使用率(%)'
+            color = '#5470c6'
+            break
+        case 'memory':
+            title = '内存使用率(%)'
+            color = '#91cc75'
+            break
+        case 'disk':
+            title = '磁盘使用率(%)'
+            color = '#fac858'
+            break
+        default:
+            title = 'CPU使用率(%)'
+            color = '#5470c6'
+    }
+
     const option = {
         tooltip: {
-            trigger: 'axis'
+            trigger: 'axis',
+            formatter: function(params) {
+                return `${params[0].axisValue}<br/>${params[0].seriesName}: ${params[0].value}%`
+            }
+        },
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
         },
         xAxis: {
             type: 'category',
-            data: ['4xx错误', '5xx错误', '超时错误', '数据库错误', '网络错误']
+            boundaryGap: false,
+            data: trendData.timestamps || generateDates(timeRange.value)
         },
         yAxis: {
-            type: 'value'
+            type: 'value',
+            name: title,
+            max: 100,
+            axisLabel: {
+                formatter: '{value}%'
+            }
         },
         series: [{
-            data: [12, 5, 8, 3, 7],
-            type: 'bar',
-            itemStyle: {
-                color: function(params) {
-                    const colorList = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de']
-                    return colorList[params.dataIndex]
+            name: title,
+            type: 'line',
+            smooth: true,
+            data: trendData.data || generateRandomData(trendData.timestamps?.length || 12, 20, 80),
+            itemStyle: { color: color },
+            areaStyle: {
+                color: {
+                    type: 'linear',
+                    x: 0, y: 0, x2: 0, y2: 1,
+                    colorStops: [
+                        { offset: 0, color: color + '80' },
+                        { offset: 1, color: color + '10' }
+                    ]
                 }
             }
         }]
     }
-    errorChartInstance.setOption(option)
-}
 
-// 初始化资源图表
-const initResourceChart = () => {
-    if (!resourceChart.value) return
-
-    resourceChartInstance = echarts.init(resourceChart.value)
-    updateResourceChart()
+    resourceChartInstance.setOption(option, true)
 }
 
 // 更新资源图表
@@ -587,9 +643,82 @@ const updateResourceChart = () => {
     resourceChartInstance.setOption(option)
 }
 
-// 更新所有图表
-const updateCharts = () => {
-    updateResourceChart()
+const loadMockData = async () => {
+    await new Promise(resolve => setTimeout(resolve, 300))
+    // 模拟数据变化
+    stats.value = {
+        cpuUsage: Math.min(100, Math.max(0, stats.value.cpuUsage + (Math.random() * 10 - 5))),
+        memoryUsage: Math.min(100, Math.max(0, stats.value.memoryUsage + (Math.random() * 5 - 2.5))),
+        diskUsage: Math.min(100, Math.max(0, stats.value.diskUsage + (Math.random() * 2 - 1))),
+        networkTraffic: Math.max(0, stats.value.networkTraffic + (Math.random() * 200 - 100)),
+        responseTime: Math.max(10, stats.value.responseTime + (Math.random() * 20 - 10)),
+        throughput: Math.max(0, stats.value.throughput + (Math.random() * 100 - 50)),
+        successRate: Math.min(100, Math.max(95, stats.value.successRate + (Math.random() * 0.5 - 0.25)))
+    }
+}
+
+// 初始化图表
+const initCharts = () => {
+    nextTick(() => {
+        initPerformanceChart()
+        initErrorChart()
+        initResourceChart()
+    })
+}
+
+// 初始化性能图表
+const initPerformanceChart = () => {
+    if (!performanceChart.value) return
+
+    performanceChartInstance = echarts.init(performanceChart.value)
+    updatePerformanceChart();
+
+}
+
+// 初始化错误统计图表
+const initErrorChart = () => {
+    if (!errorChart.value) return
+
+    errorChartInstance = echarts.init(errorChart.value)
+    const option = {
+        tooltip: {
+            trigger: 'axis'
+        },
+        xAxis: {
+            type: 'category',
+            data: ['4xx错误', '5xx错误', '超时错误', '数据库错误', '网络错误']
+        },
+        yAxis: {
+            type: 'value'
+        },
+        series: [{
+            data: [12, 5, 8, 3, 7],
+            type: 'bar',
+            itemStyle: {
+                color: function(params) {
+                    const colorList = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de']
+                    return colorList[params.dataIndex]
+                }
+            }
+        }]
+    }
+    errorChartInstance.setOption(option)
+}
+
+// 初始化资源图表
+const initResourceChart = () => {
+    if (!resourceChart.value) return
+
+    resourceChartInstance = echarts.init(resourceChart.value)
+    updateResourceChartWithRealData()
+}
+
+// 加载所有图表
+const loadCharts = () => {
+    // 更新性能图表（雷达图）
+    updatePerformanceChart()
+    // 加载资源趋势数据
+    loadResourceTrendData()
 }
 
 // 工具函数
@@ -626,10 +755,22 @@ const generateDates = (range) => {
     return dates
 }
 
+// const generateRandomData = (count, min, max) => {
+//     return Array.from({ length: count }, () =>
+//             Math.floor(Math.random() * (max - min + 1)) + min
+//     )
+// }
 const generateRandomData = (count, min, max) => {
-    return Array.from({ length: count }, () =>
-            Math.floor(Math.random() * (max - min + 1)) + min
-    )
+    const data = []
+    let current = (min + max) / 2
+
+    for (let i = 0; i < count; i++) {
+        // 添加一些随机波动，但保持连续性
+        current += (Math.random() - 0.5) * (max - min) * 0.1
+        current = Math.max(min, Math.min(max, current))
+        data.push(Math.round(current * 10) / 10)
+    }
+    return data
 }
 
 const formatNumber = (num) => {
